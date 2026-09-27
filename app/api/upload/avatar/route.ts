@@ -1,76 +1,75 @@
-// app/api/users/me/route.ts
+// app/api/upload/avatar/route.ts
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongo";
-import { User } from "@/lib/models";
 import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: Request) {
+const MAX_BYTES = 3 * 1024 * 1024; // 3 MB
+const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME!;
+const UPLOAD_PRESET = "ya6x1upb"; // your unsigned preset
+
+export async function POST(req: Request) {
     try {
         const me = await getCurrentUser();
         if (!me) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
-        const body = await req.json();
-        const { name, bio, avatar } = body;
+        const formData = await req.formData();
+        const file = formData.get("file") as File | null;
 
-        const update: Record<string, any> = {};
-
-        if (typeof name === "string") {
-            if (!name.trim()) {
-                return NextResponse.json(
-                    { message: "Name cannot be empty" },
-                    { status: 400 }
-                );
-            }
-            if (name.length > 60) {
-                return NextResponse.json(
-                    { message: "Name too long (max 60 chars)" },
-                    { status: 400 }
-                );
-            }
-            update.name = name.trim();
-        }
-
-        if (typeof bio === "string") {
-            if (bio.length > 200) {
-                return NextResponse.json(
-                    { message: "Bio too long (max 200 chars)" },
-                    { status: 400 }
-                );
-            }
-            update.bio = bio.trim();
-        }
-
-        if (typeof avatar === "string") {
-            if (avatar.length > 500) {
-                return NextResponse.json(
-                    { message: "Invalid avatar URL" },
-                    { status: 400 }
-                );
-            }
-            update.avatar = avatar;
-        }
-
-        if (Object.keys(update).length === 0) {
+        if (!file) {
             return NextResponse.json(
-                { message: "Nothing to update" },
+                { message: "No file provided" },
                 { status: 400 }
             );
         }
 
-        await connectDB();
+        if (!ALLOWED.includes(file.type)) {
+            return NextResponse.json(
+                { message: "Only JPEG, PNG, or WebP allowed" },
+                { status: 400 }
+            );
+        }
 
-        await User.updateOne({ _id: me._id }, { $set: update });
+        if (file.size > MAX_BYTES) {
+            return NextResponse.json(
+                { message: "File too large (max 3 MB)" },
+                { status: 400 }
+            );
+        }
 
-        return NextResponse.json({ ok: true });
-    } catch (err) {
-        console.error("PATCH /api/users/me error:", err);
+        const cloudForm = new FormData();
+        cloudForm.append("file", file);
+        cloudForm.append("upload_preset", UPLOAD_PRESET);
+        cloudForm.append("folder", "socially/avatars");
+
+        const cloudRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+            { method: "POST", body: cloudForm }
+        );
+
+        const cloudData: any = await cloudRes.json();
+
+        if (!cloudRes.ok) {
+            console.error("Cloudinary avatar upload failed:", cloudData);
+            return NextResponse.json(
+                { message: cloudData?.error?.message || "Upload failed" },
+                { status: cloudRes.status }
+            );
+        }
+
+        return NextResponse.json({
+            url: cloudData.secure_url,
+            publicId: cloudData.public_id,
+        });
+    } catch (err: any) {
+        console.error("POST /api/upload/avatar error:", err);
         return NextResponse.json(
-            { message: "Something went wrong" },
+            { message: err?.message || "Upload failed" },
             { status: 500 }
         );
     }
