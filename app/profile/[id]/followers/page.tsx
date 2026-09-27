@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { Types } from "mongoose";
 
 import connectDB from "@/lib/mongo";
-import { User } from "@/lib/models";
+import User from "@/models/user";
 import { getFollowingIds } from "@/lib/follow";
 import FollowListClient from "./FollowListClient";
 
