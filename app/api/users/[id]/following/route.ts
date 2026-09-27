@@ -1,7 +1,7 @@
 // app/api/users/[id]/following/route.ts
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongo";
-import User from "@/models/User";
+import User from "@/models/user";
 import { getCurrentUser } from "@/lib/auth";
 import { getFollowingIds } from "@/lib/follow";
 
