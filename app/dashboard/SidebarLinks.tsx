@@ -71,7 +71,7 @@ const LINKS: { icon: IconName; label: string; href: string }[] = [
     { icon: "message", label: "Messages", href: "/messages" },
     { icon: "bell", label: "Notifications", href: "/notifications" },
     { icon: "user", label: "Profile", href: "/profile" },
-    { icon: "bookmark", label: "Saved", href: "/saved" },
+
 ];
 
 export default function SidebarLinks({
@@ -103,8 +103,8 @@ export default function SidebarLinks({
                         key={link.href}
                         href={link.href}
                         className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
-                                ? "text-indigo-700"
-                                : "text-gray-600 hover:text-gray-900"
+                            ? "text-indigo-700"
+                            : "text-gray-600 hover:text-gray-900"
                             }`}
                     >
                         {/* Active background */}
@@ -141,8 +141,8 @@ export default function SidebarLinks({
                         {/* Icon */}
                         <svg
                             className={`relative z-10 w-5 h-5 flex-shrink-0 transition-all duration-200 ${isActive
-                                    ? "text-indigo-600 scale-105"
-                                    : "text-gray-500 group-hover:text-gray-700"
+                                ? "text-indigo-600 scale-105"
+                                : "text-gray-500 group-hover:text-gray-700"
                                 }`}
                             fill="none"
                             stroke="currentColor"
@@ -167,8 +167,8 @@ export default function SidebarLinks({
                                     damping: 20,
                                 }}
                                 className={`relative z-10 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold text-white shadow-sm ${link.icon === "bell"
-                                        ? "bg-gradient-to-br from-red-500 to-rose-500 shadow-red-200"
-                                        : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200"
+                                    ? "bg-gradient-to-br from-red-500 to-rose-500 shadow-red-200"
+                                    : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200"
                                     }`}
                             >
                                 {badge > 99 ? "99+" : badge}
