@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -11,13 +11,16 @@ import {
     IconBell,
     IconMessageCircle,
     IconUser,
+    IconLogout,
 } from "@tabler/icons-react";
 
 type NavItem = {
     title: string;
-    href: string;
+    href?: string;
     icon: React.ReactNode;
     badge?: number;
+    onClick?: () => void;
+    danger?: boolean;
 };
 
 export default function MobileNav({
@@ -28,7 +31,9 @@ export default function MobileNav({
     unreadMessages: number;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const [hidden, setHidden] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     /* Hide dock when the on-screen keyboard opens */
     useEffect(() => {
@@ -43,6 +48,18 @@ export default function MobileNav({
         vv.addEventListener("resize", onResize);
         return () => vv.removeEventListener("resize", onResize);
     }, []);
+
+    async function handleLogout() {
+        if (loggingOut) return;
+        setLoggingOut(true);
+        try {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+        } catch {
+            setLoggingOut(false);
+            alert("Logout failed. Try again.");
+        }
+    }
 
     const items: NavItem[] = [
         {
@@ -72,6 +89,12 @@ export default function MobileNav({
             href: "/profile",
             icon: <IconUser className="h-full w-full" />,
         },
+        {
+            title: "Logout",
+            icon: <IconLogout className="h-full w-full" />,
+            onClick: handleLogout,
+            danger: true,
+        },
     ];
 
     return (
@@ -96,16 +119,20 @@ export default function MobileNav({
             >
                 <div className="flex items-center gap-1 rounded-full bg-neutral-900/95 backdrop-blur-2xl border border-white/10 px-2 py-1.5 shadow-[0_12px_48px_-8px_rgba(0,0,0,0.55)]">
                     {items.map((item) => {
-                        const active =
-                            pathname === item.href ||
+                        const active = item.href
+                            ? pathname === item.href ||
                             (item.href !== "/dashboard" &&
-                                pathname?.startsWith(item.href));
+                                pathname?.startsWith(item.href))
+                            : false;
 
                         return (
                             <DockIcon
-                                key={item.href}
+                                key={item.title}
                                 item={item}
                                 active={active}
+                                loading={
+                                    item.title === "Logout" && loggingOut
+                                }
                             />
                         );
                     })}
@@ -118,49 +145,101 @@ export default function MobileNav({
 /* ================================================================
    Single icon with hover / tap animation
    ================================================================ */
-function DockIcon({ item, active }: { item: NavItem; active: boolean }) {
+function DockIcon({
+    item,
+    active,
+    loading,
+}: {
+    item: NavItem;
+    active: boolean;
+    loading?: boolean;
+}) {
+    const inner = (
+        <motion.div
+            whileTap={{ scale: 0.85 }}
+            whileHover={{ scale: 1.1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-colors ${active
+                ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/40"
+                : item.danger
+                    ? "text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    : "text-neutral-400 hover:text-white hover:bg-white/5"
+                }`}
+        >
+            <div className="w-5 h-5">
+                {loading ? (
+                    <svg
+                        className="w-full h-full animate-spin"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                        />
+                        <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                    </svg>
+                ) : (
+                    item.icon
+                )}
+            </div>
+
+            {item.badge && item.badge > 0 ? (
+                <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500 }}
+                    className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-bold text-white border-2 border-neutral-900"
+                >
+                    {item.badge > 9 ? "9+" : item.badge}
+                </motion.span>
+            ) : null}
+        </motion.div>
+    );
+
+    // If the item has an href, use Link. Otherwise, use a button.
+    if (item.href) {
+        return (
+            <Link
+                href={item.href}
+                aria-label={item.title}
+                className="relative flex items-center justify-center"
+            >
+                {inner}
+
+                {active && (
+                    <motion.span
+                        layoutId="activeDot"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 30,
+                        }}
+                        className="absolute -bottom-1 w-1 h-1 rounded-full bg-indigo-400"
+                    />
+                )}
+            </Link>
+        );
+    }
+
     return (
-        <Link
-            href={item.href}
+        <button
+            type="button"
+            onClick={item.onClick}
             aria-label={item.title}
             className="relative flex items-center justify-center"
         >
-            <motion.div
-                whileTap={{ scale: 0.85 }}
-                whileHover={{ scale: 1.1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className={`relative flex items-center justify-center w-12 h-12 rounded-full transition-colors ${active
-                    ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/40"
-                    : "text-neutral-400 hover:text-white hover:bg-white/5"
-                    }`}
-            >
-                <div className="w-5 h-5">{item.icon}</div>
-
-                {item.badge && item.badge > 0 ? (
-                    <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 500 }}
-                        className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-bold text-white border-2 border-neutral-900"
-                    >
-                        {item.badge > 9 ? "9+" : item.badge}
-                    </motion.span>
-                ) : null}
-            </motion.div>
-
-            {active && (
-                <motion.span
-                    layoutId="activeDot"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 30,
-                    }}
-                    className="absolute -bottom-1 w-1 h-1 rounded-full bg-indigo-400"
-                />
-            )}
-        </Link>
+            {inner}
+        </button>
     );
 }
