@@ -3,7 +3,6 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "motion/react";
 
 export default function PostComposer({
     userInitial,
@@ -107,26 +106,23 @@ export default function PostComposer({
     const nearLimit = charCount > 1800;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative bg-white rounded-2xl border transition-all duration-300 ${focused
-                    ? "border-indigo-200 shadow-[0_8px_30px_-12px_rgba(99,102,241,0.25)]"
+        <div
+            className={`relative bg-white rounded-2xl border transition-shadow duration-200 ${focused
+                    ? "border-indigo-200 shadow-md"
                     : "border-gray-100 shadow-sm hover:border-gray-200"
                 }`}
         >
             {/* Accent bar on focus */}
             <div
-                className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-opacity duration-300 ${focused ? "opacity-100" : "opacity-0"
+                className={`absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-opacity duration-200 ${focused ? "opacity-100" : "opacity-0"
                     }`}
             />
 
             <div className="p-4 sm:p-5">
                 <div className="flex items-start gap-3 sm:gap-3.5">
-                    {/* ─── AUTHOR AVATAR ─── */}
+                    {/* AUTHOR AVATAR */}
                     <div className="relative flex-shrink-0">
-                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden ring-2 ring-white shadow-md">
+                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
                             {userAvatar ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -157,83 +153,72 @@ export default function PostComposer({
                             className="w-full resize-none border-none focus:outline-none text-gray-800 placeholder-gray-400 bg-transparent text-sm sm:text-[15px] leading-relaxed"
                         />
 
-                        {/* ─── IMAGE PREVIEW ─── */}
-                        <AnimatePresence>
-                            {(preview || imageUrl) && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    transition={{ duration: 0.25, ease: "easeInOut" }}
-                                    className="overflow-hidden"
-                                >
-                                    <div className="relative mt-3 rounded-xl overflow-hidden border border-gray-100 group/img">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                            src={preview || imageUrl}
-                                            alt="preview"
-                                            className="w-full max-h-80 object-cover"
-                                        />
+                        {/* IMAGE PREVIEW */}
+                        {(preview || imageUrl) && (
+                            <div className="mt-3 rounded-xl overflow-hidden border border-gray-100">
+                                <div className="relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={preview || imageUrl}
+                                        alt="preview"
+                                        className="w-full max-h-80 object-cover"
+                                    />
 
-                                        {/* Subtle gradient overlay at bottom for contrast */}
-                                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent" />
-
-                                        {/* Uploading overlay */}
-                                        {uploading && (
-                                            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-                                                <svg
-                                                    className="animate-spin w-7 h-7 text-white"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <circle
-                                                        className="opacity-25"
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="4"
-                                                    />
-                                                    <path
-                                                        className="opacity-75"
-                                                        fill="currentColor"
-                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                                                    />
-                                                </svg>
-                                                <span className="text-xs font-medium text-white/90">
-                                                    Uploading...
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Remove button */}
-                                        <button
-                                            type="button"
-                                            onClick={clearImage}
-                                            disabled={uploading}
-                                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 active:scale-90 transition-all disabled:opacity-50"
-                                            aria-label="Remove image"
-                                        >
+                                    {/* Uploading overlay */}
+                                    {uploading && (
+                                        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2">
                                             <svg
-                                                className="w-4 h-4"
+                                                className="animate-spin w-7 h-7 text-white"
                                                 fill="none"
-                                                stroke="currentColor"
                                                 viewBox="0 0 24 24"
                                             >
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                />
                                                 <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M6 18L18 6M6 6l12 12"
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                                                 />
                                             </svg>
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                            <span className="text-xs font-medium text-white/90">
+                                                Uploading...
+                                            </span>
+                                        </div>
+                                    )}
 
-                        {/* ─── ACTION BAR ─── */}
+                                    {/* Remove button */}
+                                    <button
+                                        type="button"
+                                        onClick={clearImage}
+                                        disabled={uploading}
+                                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 active:scale-90 transition-transform disabled:opacity-50"
+                                        aria-label="Remove image"
+                                    >
+                                        <svg
+                                            className="w-4 h-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M6 18L18 6M6 6l12 12"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ACTION BAR */}
                         <div className="flex items-center justify-between gap-2 pt-3 mt-1 border-t border-gray-100">
                             <div className="flex items-center gap-0.5">
                                 <input
@@ -313,29 +298,23 @@ export default function PostComposer({
                             </div>
 
                             <div className="flex items-center gap-3">
-                                {/* Character count — only near limit */}
-                                <AnimatePresence>
-                                    {nearLimit && (
-                                        <motion.span
-                                            initial={{ opacity: 0, x: 8 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: 8 }}
-                                            className={`text-xs font-medium tabular-nums ${charCount > 1950
-                                                    ? "text-red-500"
-                                                    : "text-amber-500"
-                                                }`}
-                                        >
-                                            {charCount}/2000
-                                        </motion.span>
-                                    )}
-                                </AnimatePresence>
+                                {/* Character count — appears only near limit */}
+                                {nearLimit && (
+                                    <span
+                                        className={`text-xs font-medium tabular-nums ${charCount > 1950
+                                                ? "text-red-500"
+                                                : "text-amber-500"
+                                            }`}
+                                    >
+                                        {charCount}/2000
+                                    </span>
+                                )}
 
-                                <motion.button
+                                <button
                                     type="button"
                                     onClick={submit}
                                     disabled={disabled}
-                                    whileTap={{ scale: disabled ? 1 : 0.95 }}
-                                    className="px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow-md shadow-indigo-200/60 hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg hover:shadow-indigo-300/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2"
+                                    className="px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold shadow-sm hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center gap-2"
                                 >
                                     {posting ? (
                                         <>
@@ -378,18 +357,18 @@ export default function PostComposer({
                                             </svg>
                                         </>
                                     )}
-                                </motion.button>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }
 
 /* ================================================================
-   Toolbar button — reusable with tooltip
+   Toolbar button — CSS-only hover, no motion
    ================================================================ */
 function ToolbarButton({
     onClick,
@@ -408,7 +387,7 @@ function ToolbarButton({
                 type="button"
                 onClick={onClick}
                 disabled={disabled}
-                className="p-2 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 rounded-full text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 active:scale-90 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={label}
             >
                 {icon}

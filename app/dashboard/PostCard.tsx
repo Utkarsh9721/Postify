@@ -156,26 +156,19 @@ export default function PostCard({
     }
 
     return (
-        <motion.article
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="group/post relative bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden"
-        >
-            {/* Subtle top accent that appears on hover */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/0 group-hover/post:via-indigo-500/60 to-transparent transition-all duration-500" />
-
+        <article className="group/post relative bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
             <div className="p-4 sm:p-5">
                 {/* ─── HEADER ─── */}
-                <div className="flex items-start gap-3 sm:gap-3.5">
+                <div className="flex items-start gap-3">
                     <div className="relative flex-shrink-0">
-                        <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-white shadow-md">
+                        <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
                             {avatar ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                     src={avatar}
                                     alt={author}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
                                 />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
@@ -185,7 +178,6 @@ export default function PostCard({
                                 </div>
                             )}
                         </div>
-                        {/* Online dot */}
                         <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                     </div>
 
@@ -224,7 +216,7 @@ export default function PostCard({
                             {isOwner && (
                                 <button
                                     onClick={deletePost}
-                                    className="flex-shrink-0 p-1.5 -m-1.5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover/post:opacity-100"
+                                    className="flex-shrink-0 p-1.5 -m-1.5 rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover/post:opacity-100"
                                     title="Delete post"
                                     aria-label="Delete post"
                                 >
@@ -262,7 +254,7 @@ export default function PostCard({
                             <img
                                 src={image}
                                 alt="Post image"
-                                className="w-full max-h-[500px] object-cover transition-transform duration-700 hover:scale-[1.02]"
+                                className="w-full max-h-[500px] object-cover"
                                 loading="lazy"
                             />
                         </div>
@@ -368,7 +360,7 @@ export default function PostCard({
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
                             className="overflow-hidden"
                         >
                             <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
@@ -383,11 +375,8 @@ export default function PostCard({
                                     </p>
                                 ) : (
                                     commentList.map((c) => (
-                                        <motion.div
+                                        <div
                                             key={c.id}
-                                            initial={{ opacity: 0, x: -8 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ duration: 0.2 }}
                                             className="flex items-start gap-2.5"
                                         >
                                             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm">
@@ -397,6 +386,7 @@ export default function PostCard({
                                                         src={c.user.avatar}
                                                         alt={c.user.name}
                                                         className="w-full h-full object-cover"
+                                                        loading="lazy"
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
@@ -414,7 +404,7 @@ export default function PostCard({
                                                     {c.content}
                                                 </p>
                                             </div>
-                                        </motion.div>
+                                        </div>
                                     ))
                                 )}
 
@@ -430,12 +420,12 @@ export default function PostCard({
                                         }}
                                         placeholder="Write a comment..."
                                         maxLength={500}
-                                        className="flex-1 px-4 py-2 rounded-full border border-gray-200 bg-gray-50 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 focus:bg-white transition-all"
+                                        className="flex-1 px-4 py-2 rounded-full border border-gray-200 bg-gray-50 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 focus:bg-white transition-colors"
                                     />
                                     <button
                                         onClick={addComment}
                                         disabled={postingComment || !commentText.trim()}
-                                        className="px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-semibold shadow-sm shadow-indigo-200 hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                                        className="px-4 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-semibold shadow-sm hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                                     >
                                         {postingComment ? "..." : "Post"}
                                     </button>
@@ -445,12 +435,12 @@ export default function PostCard({
                     )}
                 </AnimatePresence>
             </div>
-        </motion.article>
+        </article>
     );
 }
 
 /* ================================================================
-   Action button — reusable with animated hover
+   Action button — reusable with CSS-only tap feedback
    ================================================================ */
 function ActionButton({
     onClick,
@@ -470,15 +460,10 @@ function ActionButton({
     return (
         <button
             onClick={onClick}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-gray-500 transition-all duration-200 active:scale-90 ${active ? activeColor : ""
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-gray-500 transition-colors duration-150 active:scale-90 ${active ? activeColor : ""
                 } ${hoverColor}`}
         >
-            <motion.div
-                whileTap={{ scale: 0.85 }}
-                transition={{ type: "spring", stiffness: 400, damping: 15 }}
-            >
-                {icon}
-            </motion.div>
+            {icon}
             <span className="text-xs font-medium tabular-nums">{label}</span>
         </button>
     );

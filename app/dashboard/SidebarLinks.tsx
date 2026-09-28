@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { motion } from "motion/react";
 
 type IconName =
     | "home"
@@ -71,7 +70,6 @@ const LINKS: { icon: IconName; label: string; href: string }[] = [
     { icon: "message", label: "Messages", href: "/messages" },
     { icon: "bell", label: "Notifications", href: "/notifications" },
     { icon: "user", label: "Profile", href: "/profile" },
-
 ];
 
 export default function SidebarLinks({
@@ -102,47 +100,21 @@ export default function SidebarLinks({
                     <Link
                         key={link.href}
                         href={link.href}
-                        className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
-                            ? "text-indigo-700"
-                            : "text-gray-600 hover:text-gray-900"
+                        className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${isActive
+                                ? "bg-indigo-50 text-indigo-700"
+                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                             }`}
                     >
-                        {/* Active background */}
-                        {isActive && (
-                            <motion.div
-                                layoutId="sidebar-active-bg"
-                                className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50/60 border border-indigo-100/60 shadow-[0_2px_8px_-4px_rgba(99,102,241,0.15)]"
-                                transition={{
-                                    type: "spring",
-                                    stiffness: 380,
-                                    damping: 32,
-                                }}
-                            />
-                        )}
-
-                        {/* Hover background */}
-                        {!isActive && (
-                            <div className="absolute inset-0 rounded-xl bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-                        )}
-
                         {/* Active left bar */}
                         {isActive && (
-                            <motion.span
-                                layoutId="sidebar-active-bar"
-                                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-gradient-to-b from-indigo-500 to-purple-500"
-                                transition={{
-                                    type: "spring",
-                                    stiffness: 380,
-                                    damping: 32,
-                                }}
-                            />
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-gradient-to-b from-indigo-500 to-purple-500" />
                         )}
 
                         {/* Icon */}
                         <svg
-                            className={`relative z-10 w-5 h-5 flex-shrink-0 transition-all duration-200 ${isActive
-                                ? "text-indigo-600 scale-105"
-                                : "text-gray-500 group-hover:text-gray-700"
+                            className={`relative z-10 w-5 h-5 flex-shrink-0 transition-colors duration-150 ${isActive
+                                    ? "text-indigo-600"
+                                    : "text-gray-500 group-hover:text-gray-700"
                                 }`}
                             fill="none"
                             stroke="currentColor"
@@ -158,21 +130,14 @@ export default function SidebarLinks({
 
                         {/* Badge */}
                         {badge > 0 && (
-                            <motion.span
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{
-                                    type: "spring",
-                                    stiffness: 500,
-                                    damping: 20,
-                                }}
+                            <span
                                 className={`relative z-10 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold text-white shadow-sm ${link.icon === "bell"
-                                    ? "bg-gradient-to-br from-red-500 to-rose-500 shadow-red-200"
-                                    : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200"
+                                        ? "bg-gradient-to-br from-red-500 to-rose-500"
+                                        : "bg-gradient-to-br from-indigo-500 to-purple-600"
                                     }`}
                             >
                                 {badge > 99 ? "99+" : badge}
-                            </motion.span>
+                            </span>
                         )}
                     </Link>
                 );

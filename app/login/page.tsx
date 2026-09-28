@@ -2,9 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import Link from "next/link";
-import { LampContainer } from "@/components/ui/lamp";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -38,20 +36,26 @@ export default function LoginPage() {
     }
 
     return (
-        <LampContainer>
-            <motion.div
-                initial={{ opacity: 0.5, y: 100 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{
-                    delay: 0.3,
-                    duration: 0.8,
-                    ease: "easeInOut",
-                }}
-                className="w-full max-w-md px-1 sm:px-0"
-            >
-                {/* Heading — scales from mobile to desktop */}
+        <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 px-4 py-12">
+            {/* Static lamp glow — pure CSS, no JS, no blur animation */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-64 -z-0 overflow-hidden">
+                {/* Glow bar */}
+                <div className="absolute top-12 left-1/2 -translate-x-1/2 w-[500px] max-w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+                {/* Blurred halo behind the bar */}
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-[400px] max-w-full h-32 bg-gradient-to-b from-cyan-400/30 to-transparent blur-2xl" />
+                {/* Wide soft glow */}
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[600px] max-w-full h-40 bg-cyan-500/20 blur-3xl rounded-full" />
+            </div>
+
+            {/* Ambient corner glow */}
+            <div className="pointer-events-none absolute inset-0 -z-0 overflow-hidden">
+                <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[100px]" />
+            </div>
+
+            <div className="relative z-10 w-full max-w-md">
+                {/* Heading */}
                 <div className="text-center mb-6 sm:mb-8">
-                    <h1 className="bg-gradient-to-br from-slate-300 to-slate-500 py-2 bg-clip-text text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight text-transparent leading-tight">
+                    <h1 className="bg-gradient-to-br from-slate-200 via-slate-400 to-slate-600 py-2 bg-clip-text text-center text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight text-transparent leading-tight">
                         Welcome back
                     </h1>
                     <p className="text-slate-400 text-xs sm:text-sm mt-2 sm:mt-3 px-4">
@@ -59,8 +63,8 @@ export default function LoginPage() {
                     </p>
                 </div>
 
-                {/* Form card — tighter padding on mobile */}
-                <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-5 sm:p-6 md:p-8 shadow-2xl shadow-cyan-500/10">
+                {/* Form card */}
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-6 md:p-8 shadow-2xl shadow-cyan-500/10">
                     <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
                         {/* Email */}
                         <div>
@@ -68,7 +72,7 @@ export default function LoginPage() {
                                 htmlFor="email"
                                 className="block text-xs sm:text-sm font-medium text-slate-300 mb-1.5 sm:mb-2"
                             >
-                                Email address
+                                Email
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 sm:pl-3.5 flex items-center pointer-events-none">
@@ -94,7 +98,7 @@ export default function LoginPage() {
                                     placeholder="you@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-700 bg-slate-800/50 text-slate-100 placeholder-slate-500 text-sm sm:text-base transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:bg-slate-800"
+                                    className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-xl border border-slate-700 bg-slate-800/50 text-slate-100 placeholder-slate-500 text-sm sm:text-base transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:bg-slate-800"
                                 />
                             </div>
                         </div>
@@ -139,7 +143,7 @@ export default function LoginPage() {
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-9 sm:pl-11 pr-10 sm:pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-700 bg-slate-800/50 text-slate-100 placeholder-slate-500 text-sm sm:text-base transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:bg-slate-800"
+                                    className="w-full pl-9 sm:pl-11 pr-10 sm:pr-11 py-2.5 sm:py-3 rounded-xl border border-slate-700 bg-slate-800/50 text-slate-100 placeholder-slate-500 text-sm sm:text-base transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent focus:bg-slate-800"
                                 />
                                 <button
                                     type="button"
@@ -190,7 +194,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm sm:text-base font-semibold shadow-lg shadow-cyan-500/30 hover:from-cyan-400 hover:to-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
+                            className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm sm:text-base font-semibold shadow-lg shadow-cyan-500/30 hover:from-cyan-400 hover:to-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
                         >
                             {isLoading ? (
                                 <>
@@ -234,7 +238,7 @@ export default function LoginPage() {
                         Create one
                     </Link>
                 </p>
-            </motion.div>
-        </LampContainer>
+            </div>
+        </main>
     );
 }

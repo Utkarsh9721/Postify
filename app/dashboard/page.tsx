@@ -138,22 +138,20 @@ export default async function Dashboard() {
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/40 pb-28 lg:pb-0">
-            {/* Ambient background orbs */}
+            {/* Single ambient orb — cheap and subtle */}
             <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
-                <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[120px]" />
-                <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-purple-200/30 blur-[140px]" />
-                <div className="absolute bottom-0 left-1/3 w-96 h-96 rounded-full bg-pink-200/20 blur-[120px]" />
+                <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[100px]" />
             </div>
 
             {/* ================= NAVBAR ================= */}
-            <nav className="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-2xl supports-[backdrop-filter]:bg-white/50">
+            <nav className="sticky top-0 z-40 border-b border-white/40 bg-white/70 backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14 sm:h-16">
                         <Link
                             href="/dashboard"
-                            className="flex items-center gap-2 flex-shrink-0 group"
+                            className="flex items-center gap-2 flex-shrink-0"
                         >
-                            <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-300/50 group-hover:shadow-xl group-hover:shadow-indigo-400/50 transition-all duration-300 group-hover:scale-105">
+                            <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-300/40">
                                 <svg
                                     className="w-4 h-4 sm:w-5 sm:h-5 text-white"
                                     fill="none"
@@ -167,9 +165,8 @@ export default async function Dashboard() {
                                         d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
                                     />
                                 </svg>
-                                <span className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-400 to-pink-400 opacity-0 group-hover:opacity-30 group-hover:animate-ping" />
                             </div>
-                            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent hidden sm:block">
+                            <span className="text-lg sm:text-xl font-bold text-gray-900 hidden sm:block">
                                 Postify
                             </span>
                         </Link>
@@ -199,7 +196,7 @@ export default async function Dashboard() {
                                     type="text"
                                     name="q"
                                     placeholder="Search people, posts..."
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-white/60 bg-white/50 backdrop-blur-sm text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-300 focus:bg-white transition-all duration-300 shadow-sm hover:shadow-md"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-300 transition-all"
                                 />
                             </div>
                         </form>
@@ -207,7 +204,7 @@ export default async function Dashboard() {
                         <div className="flex items-center gap-1 sm:gap-2">
                             <Link
                                 href="/search"
-                                className="md:hidden p-2 rounded-xl hover:bg-white/60 active:scale-95 transition-all"
+                                className="md:hidden p-2 rounded-xl hover:bg-gray-100 active:scale-95 transition-transform"
                                 aria-label="Search"
                             >
                                 <svg
@@ -227,7 +224,7 @@ export default async function Dashboard() {
 
                             <Link
                                 href="/notifications"
-                                className="relative p-2 rounded-xl hover:bg-white/60 active:scale-95 transition-all"
+                                className="relative p-2 rounded-xl hover:bg-gray-100 active:scale-95 transition-transform"
                                 aria-label="Notifications"
                             >
                                 <svg
@@ -244,7 +241,7 @@ export default async function Dashboard() {
                                     />
                                 </svg>
                                 {unreadNotifications > 0 && (
-                                    <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-rose-500 rounded-full border-2 border-white text-[9px] font-bold text-white shadow-md">
+                                    <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-rose-500 rounded-full border-2 border-white text-[9px] font-bold text-white shadow-sm">
                                         {unreadNotifications > 9
                                             ? "9+"
                                             : unreadNotifications}
@@ -254,7 +251,7 @@ export default async function Dashboard() {
 
                             <Link
                                 href="/messages"
-                                className="relative p-2 rounded-xl hover:bg-white/60 active:scale-95 transition-all hidden sm:block"
+                                className="relative p-2 rounded-xl hover:bg-gray-100 active:scale-95 transition-transform hidden sm:block"
                                 aria-label="Messages"
                             >
                                 <svg
@@ -285,17 +282,17 @@ export default async function Dashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
                     {/* ---------------- LEFT: PROFILE ---------------- */}
                     <aside className="lg:col-span-3 space-y-4 order-2 lg:order-1">
-                        <div className="group relative rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_-12px_rgba(99,102,241,0.15)] hover:shadow-[0_16px_48px_-16px_rgba(99,102,241,0.25)] transition-all duration-500 overflow-hidden">
-                            {/* Thin accent line at top */}
-                            <div className="h-1 bg-gradient-to-r from-indigo-500/40 via-purple-500/60 to-pink-500/40" />
+                        <div className="group relative rounded-3xl bg-white/85 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+                            {/* Thin accent line */}
+                            <div className="h-1 bg-gradient-to-r from-indigo-500/50 via-purple-500/70 to-pink-500/50" />
 
                             <div className="px-4 sm:px-5 pt-6 pb-4 sm:pb-5">
                                 <Link
                                     href="/profile"
-                                    className="flex justify-center mb-3 group/avatar"
+                                    className="flex justify-center mb-3"
                                 >
                                     <div className="relative">
-                                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full p-[3px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 shadow-lg group-hover/avatar:shadow-xl group-hover/avatar:shadow-indigo-300/50 transition-all duration-300 group-hover/avatar:scale-105">
+                                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full p-[3px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 shadow-md transition-transform duration-300 hover:scale-105">
                                             <div className="w-full h-full rounded-full overflow-hidden bg-white">
                                                 {userAvatar ? (
                                                     // eslint-disable-next-line @next/next/no-img-element
@@ -313,18 +310,15 @@ export default async function Dashboard() {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Pulsing online dot */}
-                                        <span className="absolute bottom-1 right-1 flex h-3.5 w-3.5">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                                            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-500 border-2 border-white" />
-                                        </span>
+                                        {/* Static online dot — no ping */}
+                                        <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
                                     </div>
                                 </Link>
 
                                 <div className="text-center">
                                     <Link
                                         href="/profile"
-                                        className="inline-block text-base sm:text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent hover:from-indigo-600 hover:to-purple-600 transition-all duration-300"
+                                        className="inline-block text-base sm:text-lg font-bold text-gray-900 hover:text-indigo-600 transition-colors"
                                     >
                                         {userName}
                                     </Link>
@@ -337,9 +331,9 @@ export default async function Dashboard() {
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-gray-100/80">
-                                    <div className="text-center py-1.5 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50/60 hover:to-purple-50/60 transition-all duration-300">
-                                        <p className="text-base sm:text-lg font-bold bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-gray-100">
+                                    <div className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors">
+                                        <p className="text-base sm:text-lg font-bold text-indigo-600">
                                             {myPostCount}
                                         </p>
                                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium">
@@ -348,9 +342,9 @@ export default async function Dashboard() {
                                     </div>
                                     <Link
                                         href={`/profile/${currentUserId}/followers`}
-                                        className="text-center py-1.5 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50/60 hover:to-purple-50/60 transition-all duration-300"
+                                        className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors"
                                     >
-                                        <p className="text-base sm:text-lg font-bold bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                        <p className="text-base sm:text-lg font-bold text-indigo-600">
                                             {formatCount(
                                                 currentUser.followers?.length ?? 0
                                             )}
@@ -361,9 +355,9 @@ export default async function Dashboard() {
                                     </Link>
                                     <Link
                                         href={`/profile/${currentUserId}/following`}
-                                        className="text-center py-1.5 rounded-xl hover:bg-gradient-to-br hover:from-indigo-50/60 hover:to-purple-50/60 transition-all duration-300"
+                                        className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors"
                                     >
-                                        <p className="text-base sm:text-lg font-bold bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                        <p className="text-base sm:text-lg font-bold text-indigo-600">
                                             {formatCount(
                                                 currentUser.following?.length ?? 0
                                             )}
@@ -376,15 +370,14 @@ export default async function Dashboard() {
 
                                 <Link
                                     href="/profile/edit"
-                                    className="relative block text-center w-full mt-4 sm:mt-5 py-2.5 rounded-2xl text-white text-xs sm:text-sm font-semibold overflow-hidden group/btn shadow-lg shadow-indigo-300/40 hover:shadow-xl hover:shadow-indigo-400/50 active:scale-[0.98] transition-all duration-300"
+                                    className="block text-center w-full mt-4 sm:mt-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-200/60 hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all"
                                 >
-                                    <span className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-[length:200%_100%] group-hover/btn:animate-[gradient_2s_ease_infinite]" />
-                                    <span className="relative">Edit Profile</span>
+                                    Edit Profile
                                 </Link>
                             </div>
                         </div>
 
-                        <div className="hidden lg:block rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_-12px_rgba(99,102,241,0.15)] p-3">
+                        <div className="hidden lg:block rounded-3xl bg-white/85 border border-gray-100 shadow-sm p-3">
                             <SidebarLinks
                                 unreadNotifications={unreadNotifications}
                                 unreadMessages={unreadMessages}
@@ -413,10 +406,9 @@ export default async function Dashboard() {
 
                     {/* ---------------- RIGHT: NOTIFICATIONS + MESSAGES ---------------- */}
                     <aside className="lg:col-span-3 space-y-4 order-3">
-                        <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_-12px_rgba(99,102,241,0.15)] hover:shadow-[0_16px_48px_-16px_rgba(99,102,241,0.25)] transition-all duration-500 p-4 sm:p-5">
+                        <div className="rounded-3xl bg-white/85 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-5">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                <h3 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-pulse" />
+                                <h3 className="text-sm sm:text-base font-bold text-gray-900">
                                     Notifications
                                 </h3>
                                 {unreadNotifications > 0 && (
@@ -440,16 +432,15 @@ export default async function Dashboard() {
                             )}
                             <Link
                                 href="/notifications"
-                                className="block text-center w-full mt-3 sm:mt-4 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors py-2 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50/60 hover:to-purple-50/60"
+                                className="block text-center w-full mt-3 sm:mt-4 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors py-2 rounded-xl hover:bg-indigo-50"
                             >
                                 View all
                             </Link>
                         </div>
 
-                        <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_-12px_rgba(99,102,241,0.15)] hover:shadow-[0_16px_48px_-16px_rgba(99,102,241,0.25)] transition-all duration-500 p-4 sm:p-5">
+                        <div className="rounded-3xl bg-white/85 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-5">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                <h3 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 animate-pulse" />
+                                <h3 className="text-sm sm:text-base font-bold text-gray-900">
                                     Messages
                                 </h3>
                                 {unreadMessages > 0 && (
@@ -473,7 +464,7 @@ export default async function Dashboard() {
                             )}
                             <Link
                                 href="/messages"
-                                className="block text-center w-full mt-3 sm:mt-4 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors py-2 rounded-xl hover:bg-gradient-to-r hover:from-indigo-50/60 hover:to-purple-50/60"
+                                className="block text-center w-full mt-3 sm:mt-4 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors py-2 rounded-xl hover:bg-indigo-50"
                             >
                                 View all
                             </Link>
@@ -554,11 +545,10 @@ function pickColor(seed: string): string {
 
 function EmptyState({ title, message }: { title: string; message: string }) {
     return (
-        <div className="relative rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_-12px_rgba(99,102,241,0.15)] p-8 sm:p-10 text-center overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-gradient-to-br from-indigo-200/40 to-purple-200/40 blur-3xl" />
-            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-3 ring-1 ring-white/80 shadow-inner">
+        <div className="relative rounded-3xl bg-white/85 border border-gray-100 shadow-sm p-8 sm:p-10 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-3">
                 <svg
-                    className="w-8 h-8 text-indigo-400 animate-pulse"
+                    className="w-8 h-8 text-indigo-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -571,10 +561,8 @@ function EmptyState({ title, message }: { title: string; message: string }) {
                     />
                 </svg>
             </div>
-            <p className="relative text-sm font-semibold text-gray-800">
-                {title}
-            </p>
-            <p className="relative text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+            <p className="text-sm font-semibold text-gray-800">{title}</p>
+            <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
                 {message}
             </p>
         </div>
@@ -599,9 +587,9 @@ function NotificationItem({
     return (
         <Link
             href="/notifications"
-            className="group flex items-start gap-3 p-2 -mx-2 rounded-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300"
+            className="group flex items-start gap-3 p-2 -mx-2 rounded-2xl hover:bg-indigo-50/60 transition-colors"
         >
-            <div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm group-hover:shadow-md group-hover:ring-indigo-100 transition-all duration-300">
+            <div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm">
                 {avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -628,7 +616,6 @@ function NotificationItem({
                     {time}
                 </p>
             </div>
-            <span className="mt-2 w-1.5 h-1.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex-shrink-0 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300" />
         </Link>
     );
 }
@@ -653,10 +640,10 @@ function MessageItem({
     return (
         <Link
             href="/messages"
-            className="group flex items-center gap-3 p-2 -mx-2 rounded-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300"
+            className="group flex items-center gap-3 p-2 -mx-2 rounded-2xl hover:bg-indigo-50/60 transition-colors"
         >
             <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm group-hover:shadow-md group-hover:ring-indigo-100 transition-all duration-300">
+                <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
                     {avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -675,10 +662,7 @@ function MessageItem({
                     )}
                 </div>
                 {online && (
-                    <span className="absolute bottom-0 right-0 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white" />
-                    </span>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                 )}
             </div>
             <div className="flex-1 min-w-0">
@@ -690,7 +674,7 @@ function MessageItem({
                         {time}
                     </span>
                 </div>
-                <p className="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5 group-hover:text-gray-600 transition-colors">
+                <p className="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5">
                     {preview}
                 </p>
             </div>

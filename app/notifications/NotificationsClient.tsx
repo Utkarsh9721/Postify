@@ -4,7 +4,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "motion/react";
 
 type NotificationType =
     | "like"
@@ -99,22 +98,20 @@ export default function NotificationsClient({
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/40 pb-28 lg:pb-0">
-            {/* Ambient background orbs */}
+            {/* Single ambient orb */}
             <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
-                <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[120px]" />
-                <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-purple-200/30 blur-[140px]" />
-                <div className="absolute bottom-0 left-1/3 w-96 h-96 rounded-full bg-pink-200/20 blur-[120px]" />
+                <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[100px]" />
             </div>
 
             {/* Navbar */}
-            <nav className="sticky top-0 z-40 border-b border-white/40 bg-white/60 backdrop-blur-2xl">
+            <nav className="sticky top-0 z-40 border-b border-gray-100 bg-white/85 backdrop-blur-md">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14 sm:h-16">
                         <Link
                             href="/dashboard"
-                            className="flex items-center gap-2 group"
+                            className="flex items-center gap-2"
                         >
-                            <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-300/50 group-hover:scale-105 transition-all duration-300">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
                                 <svg
                                     className="w-4 h-4 sm:w-5 sm:h-5 text-white"
                                     fill="none"
@@ -129,7 +126,7 @@ export default function NotificationsClient({
                                     />
                                 </svg>
                             </div>
-                            <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent hidden sm:block">
+                            <span className="text-lg sm:text-xl font-bold text-gray-900 hidden sm:block">
                                 Socially
                             </span>
                         </Link>
@@ -158,27 +155,14 @@ export default function NotificationsClient({
 
             <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
                 {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex items-center justify-between mb-5 gap-3"
-                >
+                <div className="flex items-center justify-between mb-5 gap-3">
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 via-indigo-900 to-purple-900 bg-clip-text text-transparent flex items-center gap-2">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
                             Notifications
                             {unreadCount > 0 && (
-                                <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 500,
-                                    }}
-                                    className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold text-white bg-gradient-to-br from-red-500 to-rose-500 rounded-full shadow-md shadow-red-300/50"
-                                >
+                                <span className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 text-xs font-bold text-white bg-gradient-to-br from-red-500 to-rose-500 rounded-full shadow-sm">
                                     {unreadCount > 99 ? "99+" : unreadCount}
-                                </motion.span>
+                                </span>
                             )}
                         </h1>
                         {unreadCount > 0 && (
@@ -188,60 +172,55 @@ export default function NotificationsClient({
                         )}
                     </div>
                     {unreadCount > 0 && (
-                        <motion.button
-                            whileTap={{ scale: 0.95 }}
+                        <button
                             onClick={markAllRead}
                             disabled={markingAll}
-                            className="relative px-4 py-2 rounded-full text-xs sm:text-sm font-semibold overflow-hidden shadow-sm hover:shadow-md transition-all disabled:opacity-60 group/btn"
+                            className="px-4 py-2 rounded-full text-xs sm:text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-indigo-700 active:scale-95 transition-all disabled:opacity-60 flex items-center gap-1.5 shadow-sm"
                         >
-                            <span className="absolute inset-0 bg-white/70 backdrop-blur-sm border border-white/60" />
-                            <span className="absolute inset-0 bg-gradient-to-r from-indigo-50/0 via-indigo-50/60 to-purple-50/0 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                            <span className="relative flex items-center gap-1.5 text-gray-700 group-hover/btn:text-indigo-700">
-                                {markingAll ? (
-                                    <>
-                                        <svg
-                                            className="w-3.5 h-3.5 animate-spin"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <circle
-                                                className="opacity-25"
-                                                cx="12"
-                                                cy="12"
-                                                r="10"
-                                                stroke="currentColor"
-                                                strokeWidth="4"
-                                            />
-                                            <path
-                                                className="opacity-75"
-                                                fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                                            />
-                                        </svg>
-                                        Marking...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg
-                                            className="w-3.5 h-3.5"
-                                            fill="none"
+                            {markingAll ? (
+                                <>
+                                    <svg
+                                        className="w-3.5 h-3.5 animate-spin"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
                                             stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M5 13l4 4L19 7"
-                                            />
-                                        </svg>
-                                        Mark all read
-                                    </>
-                                )}
-                            </span>
-                        </motion.button>
+                                            strokeWidth="4"
+                                        />
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                        />
+                                    </svg>
+                                    Marking...
+                                </>
+                            ) : (
+                                <>
+                                    <svg
+                                        className="w-3.5 h-3.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                        />
+                                    </svg>
+                                    Mark all read
+                                </>
+                            )}
+                        </button>
                     )}
-                </motion.div>
+                </div>
 
                 {/* Tabs */}
                 <div className="flex gap-2 mb-5">
@@ -257,55 +236,32 @@ export default function NotificationsClient({
                         <button
                             key={t.key}
                             onClick={() => setTab(t.key as any)}
-                            className={`relative px-4 py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-300 ${tab === t.key
-                                    ? "text-white shadow-lg shadow-indigo-300/50"
-                                    : "bg-white/60 backdrop-blur-sm text-gray-600 border border-white/60 hover:bg-white hover:text-gray-900"
+                            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${tab === t.key
+                                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm"
+                                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                                 }`}
                         >
-                            {tab === t.key && (
-                                <motion.span
-                                    layoutId="notifs-tab-bg"
-                                    className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600"
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 380,
-                                        damping: 32,
-                                    }}
-                                />
-                            )}
-                            <span className="relative">{t.label}</span>
+                            {t.label}
                         </button>
                     ))}
                 </div>
 
                 {/* List */}
-                <AnimatePresence mode="wait">
-                    {filtered.length === 0 ? (
-                        <EmptyState key={`empty-${tab}`} tab={tab} />
-                    ) : (
-                        <motion.div
-                            key={`list-${tab}`}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{ duration: 0.25 }}
-                            className="space-y-2"
-                        >
-                            <AnimatePresence initial={false}>
-                                {filtered.map((n, idx) => (
-                                    <NotificationRow
-                                        key={n.id}
-                                        notif={n}
-                                        busy={busyId === n.id}
-                                        index={idx}
-                                        onMarkRead={() => markRead(n.id)}
-                                        onRemove={() => remove(n.id)}
-                                    />
-                                ))}
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {filtered.length === 0 ? (
+                    <EmptyState tab={tab} />
+                ) : (
+                    <div className="space-y-2">
+                        {filtered.map((n) => (
+                            <NotificationRow
+                                key={n.id}
+                                notif={n}
+                                busy={busyId === n.id}
+                                onMarkRead={() => markRead(n.id)}
+                                onRemove={() => remove(n.id)}
+                            />
+                        ))}
+                    </div>
+                )}
             </main>
         </div>
     );
@@ -318,13 +274,11 @@ export default function NotificationsClient({
 function NotificationRow({
     notif,
     busy,
-    index,
     onMarkRead,
     onRemove,
 }: {
     notif: Notif;
     busy: boolean;
-    index: number;
     onMarkRead: () => void;
     onRemove: () => void;
 }) {
@@ -335,41 +289,24 @@ function NotificationRow({
     const typeIcon = typeIconFor(notif.type);
 
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{
-                duration: 0.25,
-                delay: Math.min(index * 0.02, 0.2),
-                ease: "easeOut",
-            }}
-            className={`group relative rounded-2xl border overflow-hidden transition-all duration-300 ${notif.read
-                    ? "bg-white/70 backdrop-blur-xl border-white/60 hover:shadow-[0_8px_24px_-12px_rgba(99,102,241,0.2)] hover:border-white/80"
-                    : "bg-gradient-to-br from-indigo-50/80 to-purple-50/80 backdrop-blur-xl border-indigo-100/60 shadow-[0_8px_24px_-12px_rgba(99,102,241,0.25)] hover:shadow-[0_12px_32px_-12px_rgba(99,102,241,0.35)]"
+        <div
+            className={`group relative rounded-2xl border overflow-hidden transition-colors ${notif.read
+                    ? "bg-white border-gray-100 hover:border-gray-200"
+                    : "bg-indigo-50/70 border-indigo-100"
                 }`}
         >
             {/* Unread left accent */}
             {!notif.read && (
-                <motion.span
-                    layoutId={`unread-${notif.id}`}
-                    initial={{ scaleY: 0 }}
-                    animate={{ scaleY: 1 }}
-                    className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-indigo-500 to-purple-500"
-                />
+                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-indigo-500 to-purple-500" />
             )}
-
-            {/* Soft corner glow */}
-            <div className="pointer-events-none absolute -top-16 -right-16 w-32 h-32 rounded-full bg-gradient-to-br from-indigo-200/40 to-purple-200/40 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
             <div className="relative flex items-start gap-3 p-3 sm:p-4">
                 {/* Actor avatar with type badge */}
                 <Link
                     href={`/profile/${notif.actor.id}`}
-                    className="relative flex-shrink-0 group/avatar"
+                    className="relative flex-shrink-0"
                 >
-                    <div className="relative w-11 h-11 rounded-full p-[2px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 shadow-sm group-hover/avatar:shadow-md group-hover/avatar:scale-105 transition-all duration-300">
+                    <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 shadow-sm">
                         <div className="w-full h-full rounded-full overflow-hidden bg-white">
                             {notif.actor.avatar ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -377,6 +314,7 @@ function NotificationRow({
                                     src={notif.actor.avatar}
                                     alt={notif.actor.name}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
                                 />
                             ) : (
                                 <div
@@ -392,7 +330,7 @@ function NotificationRow({
 
                     {/* Type indicator badge */}
                     <div
-                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center shadow-md border-2 border-white ${typeIcon.bg}`}
+                        className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center shadow-sm border-2 border-white ${typeIcon.bg}`}
                     >
                         <span className="text-white">{typeIcon.icon}</span>
                     </div>
@@ -408,7 +346,7 @@ function NotificationRow({
                             <span className="text-gray-600">{text}</span>
                         </p>
                         {notif.post?.content && (
-                            <div className="mt-1.5 px-3 py-2 rounded-xl bg-white/60 border border-white/80 backdrop-blur-sm">
+                            <div className="mt-1.5 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
                                 <p className="text-xs text-gray-500 line-clamp-2 italic">
                                     &ldquo;{notif.post.content}&rdquo;
                                 </p>
@@ -433,14 +371,13 @@ function NotificationRow({
                     </Link>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                {/* Actions — always visible on mobile, hover on desktop */}
+                <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                     {!notif.read && (
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
+                        <button
                             onClick={onMarkRead}
                             disabled={busy}
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-indigo-500 hover:text-white hover:bg-gradient-to-br hover:from-indigo-500 hover:to-purple-600 transition-all"
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-indigo-500 hover:text-white hover:bg-gradient-to-br hover:from-indigo-500 hover:to-purple-600 active:scale-90 transition-all"
                             aria-label="Mark as read"
                             title="Mark as read"
                         >
@@ -457,13 +394,12 @@ function NotificationRow({
                                     d="M5 13l4 4L19 7"
                                 />
                             </svg>
-                        </motion.button>
+                        </button>
                     )}
-                    <motion.button
-                        whileTap={{ scale: 0.9 }}
+                    <button
                         onClick={onRemove}
                         disabled={busy}
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 active:scale-90 transition-all"
                         aria-label="Remove"
                         title="Remove"
                     >
@@ -480,27 +416,19 @@ function NotificationRow({
                                 d="M6 18L18 6M6 6l12 12"
                             />
                         </svg>
-                    </motion.button>
+                    </button>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }
 
 function EmptyState({ tab }: { tab: "all" | "unread" }) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className="relative rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_8px_32px_-12px_rgba(99,102,241,0.15)] p-12 text-center overflow-hidden"
-        >
-            <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-gradient-to-br from-indigo-200/40 to-purple-200/40 blur-3xl" />
-
-            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 ring-1 ring-white/80 shadow-inner flex items-center justify-center mx-auto mb-4">
+        <div className="rounded-3xl bg-white border border-gray-100 shadow-sm p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
                 <svg
-                    className="w-8 h-8 text-indigo-400 animate-pulse"
+                    className="w-8 h-8 text-indigo-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -513,15 +441,15 @@ function EmptyState({ tab }: { tab: "all" | "unread" }) {
                     />
                 </svg>
             </div>
-            <p className="relative text-sm font-semibold text-gray-700">
+            <p className="text-sm font-semibold text-gray-700">
                 {tab === "unread"
                     ? "No unread notifications"
                     : "No notifications yet"}
             </p>
-            <p className="relative text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
                 When someone interacts with you, it will appear here.
             </p>
-        </motion.div>
+        </div>
     );
 }
 
