@@ -70,10 +70,6 @@ export const SparklesCore = (props: ParticlesProps) => {
             },
           },
           particles: {
-            bounce: {
-              horizontal: { value: 1 },
-              vertical: { value: 1 },
-            },
             color: {
               value: particleColor || "#ffffff",
             },
@@ -105,8 +101,6 @@ export const SparklesCore = (props: ParticlesProps) => {
               },
             },
             shape: {
-              close: true,
-              fill: true,
               options: {},
               type: "circle",
             },
