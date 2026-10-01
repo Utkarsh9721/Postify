@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ParticlesInit } from "@/components/ParticlesInit";
+import { Providers } from "./providers";
+import { ScrollToTop } from "@/components/ScrollToTop";   // ← new
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,9 +26,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-black text-white">
-        <ParticlesInit>{children}</ParticlesInit>
+      <body className="min-h-full flex flex-col">
+        <Providers>
+          <ScrollToTop />                                {/* ← new */}
+          <ParticlesInit>{children}</ParticlesInit>
+        </Providers>
       </body>
     </html>
   );

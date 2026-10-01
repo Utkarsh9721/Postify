@@ -9,6 +9,7 @@ import { AnimatedTestimonials } from "@/components/ui/animated-testimonials";
 import Carousel from "@/components/ui/carousel";
 import { SparklesCore } from "@/components/ui/sparkles";
 import { Spotlight } from "@/components/ui/spotlight";
+import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 
 const Globe3D = dynamic(
   () => import("@/components/ui/3d-globe").then((mod) => mod.Globe3D),
@@ -139,9 +140,22 @@ export default function Home() {
               </span>
             </div>
 
-            <h1 className="bg-gradient-to-br from-white via-neutral-200 to-neutral-500 bg-clip-text text-3xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-transparent leading-[0.95]">
-              Postify
-            </h1>
+            {/* FIX: flex wrapper so justify-center actually applies on mobile */}
+            <div className="flex justify-center lg:justify-start">
+              <DiaTextReveal
+                text="Postify"
+                colors={[
+                  "#6366f1",
+                  "#a855f7",
+                  "#ec4899",
+                  "#818cf8",
+                  "#6366f1",
+                ]}
+                textColor="#ffffff"
+                duration={2}
+                className="text-3xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] text-center lg:text-left"
+              />
+            </div>
 
             <p className="mt-4 sm:mt-6 text-sm sm:text-base md:text-xl text-neutral-400 max-w-xl mx-auto lg:mx-0 leading-relaxed px-2 sm:px-0">
               Where conversations happen. Share moments with
@@ -193,11 +207,15 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* RIGHT: globe — real 3D on ALL devices */}
+          {/* RIGHT: globe */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            transition={{
+              duration: 0.8,
+              delay: 0.2,
+              ease: "easeOut",
+            }}
             className="relative h-[340px] xs:h-[380px] sm:h-[450px] md:h-[500px] lg:h-[600px] w-full order-1 lg:order-2 touch-none mb-16 sm:mb-0"
           >
             {mounted ? (
@@ -211,7 +229,11 @@ export default function Home() {
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <circle cx="12" cy="12" r="10" />
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                        />
                         <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                       </svg>
                     </div>
@@ -265,9 +287,16 @@ export default function Home() {
                 Why Postify
               </span>
             </div>
-            <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white">
-              Built for real people
-            </h2>
+
+            <div className="flex justify-center">
+              <DiaTextReveal
+                text="Built for real people"
+                textColor="#ffffff"
+                duration={1.5}
+                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+              />
+            </div>
+
             <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
               Every feature exists for a reason. No filler, no
               distractions.
@@ -424,9 +453,16 @@ export default function Home() {
                 Features
               </span>
             </div>
-            <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white">
-              Everything you need
-            </h2>
+
+            <div className="flex justify-center">
+              <DiaTextReveal
+                text="Everything you need"
+                textColor="#ffffff"
+                duration={1.5}
+                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+              />
+            </div>
+
             <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
               Built for the way people actually talk. No bloat,
               no noise.
@@ -445,9 +481,16 @@ export default function Home() {
                 Testimonials
               </span>
             </div>
-            <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white">
-              Loved by creators
-            </h2>
+
+            <div className="flex justify-center">
+              <DiaTextReveal
+                text="Loved by creators"
+                textColor="#ffffff"
+                duration={1.5}
+                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+              />
+            </div>
+
             <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
               Real feedback from people who use Postify every
               day.
@@ -472,9 +515,22 @@ export default function Home() {
         </div>
 
         <div className="relative mx-auto max-w-3xl text-center">
-          <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white">
-            Ready to join?
-          </h2>
+          <div className="flex justify-center">
+            <DiaTextReveal
+              text="Ready to join?"
+              colors={[
+                "#6366f1",
+                "#a855f7",
+                "#ec4899",
+                "#818cf8",
+                "#6366f1",
+              ]}
+              textColor="#ffffff"
+              duration={1.8}
+              className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+            />
+          </div>
+
           <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-lg mx-auto px-2">
             Create your account in seconds. No credit card, no
             setup — just start sharing.
