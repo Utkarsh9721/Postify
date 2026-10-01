@@ -25,35 +25,36 @@ export default async function FriendsPage() {
 
     await connectDB();
 
-    const me = await User.findOne(
-        payload.id
-            ? { _id: payload.id }
-            : payload.userId
-                ? { _id: payload.userId }
-                : { email: payload.email }
-    )
-        .select("-password")
+    // Resolve the current user with a single query, matching either id or email
+    // so we don't run two separate lookups.
+    const currentUserFilter = payload.id
+        ? { _id: payload.id }
+        : payload.userId
+            ? { _id: payload.userId }
+            : { email: payload.email };
+
+    const me = await User.findOne(currentUserFilter)
+        .select("name email following followers")
         .lean();
 
     if (!me) redirect("/login");
 
-    const meId = me._id.toString();
+    const meId = me._id;
 
-    const [users, meDoc] = await Promise.all([
-        User.find({ _id: { $ne: me._id } })
-            .select("name email avatar bio followers following")
-            .sort({ createdAt: -1 })
-            .limit(100)
-            .lean(),
-        User.findById(me._id).select("following followers").lean(),
-    ]);
-
+    // Compute follow/block sets once
     const myFollowing = new Set(
-        (meDoc?.following ?? []).map((id: any) => id.toString())
+        (me.following ?? []).map((id: any) => id.toString())
     );
     const myFollowers = new Set(
-        (meDoc?.followers ?? []).map((id: any) => id.toString())
+        (me.followers ?? []).map((id: any) => id.toString())
     );
+
+    // Single query for the users list — no need to fetch me again
+    const users = await User.find({ _id: { $ne: meId } })
+        .select("name email avatar bio followers following")
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean();
 
     const initialUsers = users.map((u: any) => {
         const uid = u._id.toString();
@@ -72,17 +73,16 @@ export default async function FriendsPage() {
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/40 pb-28 lg:pb-0">
-            {/* ─── Ambient background orbs ─── */}
+            {/* Ambient background */}
             <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
                 <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[120px]" />
                 <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full bg-purple-200/30 blur-[140px]" />
                 <div className="absolute bottom-0 left-1/3 w-96 h-96 rounded-full bg-pink-200/20 blur-[120px]" />
             </div>
 
-            {/* ─── Content ─── */}
             <div className="relative z-10">
                 <FriendsClient
-                    me={{ id: meId, name: me.name, email: me.email }}
+                    me={{ id: meId.toString(), name: me.name, email: me.email }}
                     initialUsers={JSON.parse(JSON.stringify(initialUsers))}
                 />
             </div>

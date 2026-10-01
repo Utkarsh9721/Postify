@@ -2,6 +2,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import jwt from "jsonwebtoken";
+import { Types } from "mongoose";
 
 import connectDB from "@/lib/mongo";
 import { User, Notification } from "@/lib/models";
@@ -25,26 +26,32 @@ export default async function NotificationsPage() {
 
     await connectDB();
 
-    const currentUser = await User.findOne(
-        payload.id
-            ? { _id: payload.id }
-            : payload.userId
-                ? { _id: payload.userId }
-                : { email: payload.email }
-    )
-        .select("-password")
+    const currentUserFilter = payload.id
+        ? { _id: payload.id }
+        : payload.userId
+            ? { _id: payload.userId }
+            : { email: payload.email };
+
+    // Only fields used downstream
+    const currentUser = await User.findOne(currentUserFilter)
+        .select("name email")
         .lean();
 
     if (!currentUser) redirect("/login");
 
-    const userId = currentUser._id.toString();
+    const userObjectId = new Types.ObjectId(currentUser._id);
 
-    const notifications = await Notification.find({ recipient: userId })
+    const notifications = await Notification.find({
+        recipient: userObjectId,
+    })
         .sort({ createdAt: -1 })
         .limit(50)
-        .populate("actor", "name email avatar")
+        .select("type read createdAt actor post")
+        .populate("actor", "name avatar")
         .populate("post", "content")
         .lean();
+
+    const userId = currentUser._id.toString();
 
     const initialNotifications = notifications.map((n: any) => ({
         id: n._id.toString(),
@@ -54,7 +61,6 @@ export default async function NotificationsPage() {
         actor: {
             id: n.actor?._id?.toString() ?? "",
             name: n.actor?.name ?? "Someone",
-            email: n.actor?.email ?? "",
             avatar: n.actor?.avatar ?? "",
         },
         post: n.post

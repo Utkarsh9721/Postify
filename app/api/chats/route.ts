@@ -1,5 +1,6 @@
 // app/api/chats/route.ts
 import { NextResponse } from "next/server";
+import { Types } from "mongoose";
 import connectDB from "@/lib/mongo";
 import Chat from "@/models/Chat";
 import Message from "@/models/Message";
@@ -17,31 +18,41 @@ export async function GET() {
     try {
         const user = await getCurrentUser();
         if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
         await connectDB();
 
-        const chats = await Chat.find({ participants: user._id })
+        const userObjectId = new Types.ObjectId(user._id);
+
+        const chats = await Chat.find({ participants: userObjectId })
             .sort({ updatedAt: -1 })
+            .limit(50)
+            .select("participants lastMessage updatedAt")
             .populate("participants", "name email avatar")
             .populate({
                 path: "lastMessage",
-                populate: { path: "sender", select: "name email" },
+                select: "content sender createdAt",
+                populate: { path: "sender", select: "name" },
             })
             .lean();
 
+        const userId = user._id;
+
         const mapped = chats.map((c: any) => {
             const other = c.participants.find(
-                (p: any) => p._id.toString() !== user._id
+                (p: any) => p._id.toString() !== userId
             );
             const last = c.lastMessage;
-            const isMine = last?.sender?._id?.toString() === user._id;
+            const isMine = last?.sender?._id?.toString() === userId;
 
             return {
                 id: c._id.toString(),
                 other: {
-                    id: other?._id?.toString(),
+                    id: other?._id?.toString() ?? "",
                     name: other?.name ?? "Unknown",
                     email: other?.email ?? "",
                     avatar: other?.avatar ?? "",
@@ -76,7 +87,10 @@ export async function POST(req: Request) {
     try {
         const user = await getCurrentUser();
         if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
         const { userId } = await req.json();
@@ -84,6 +98,13 @@ export async function POST(req: Request) {
         if (!userId) {
             return NextResponse.json(
                 { message: "userId is required" },
+                { status: 400 }
+            );
+        }
+
+        if (!Types.ObjectId.isValid(userId)) {
+            return NextResponse.json(
+                { message: "Invalid userId" },
                 { status: 400 }
             );
         }
@@ -97,30 +118,47 @@ export async function POST(req: Request) {
 
         await connectDB();
 
-        const otherUser = await User.findById(userId).select("name email avatar");
+        const userObjectId = new Types.ObjectId(user._id);
+        const otherObjectId = new Types.ObjectId(userId);
+
+        // Run user lookup and existing chat lookup in parallel
+        const [otherUser, existingChat] = await Promise.all([
+            User.findById(otherObjectId)
+                .select("name email avatar")
+                .lean(),
+
+            Chat.findOne({
+                participants: { $all: [userObjectId, otherObjectId], $size: 2 },
+            })
+                .select("_id")
+                .lean(),
+        ]);
+
         if (!otherUser) {
-            return NextResponse.json({ message: "User not found" }, { status: 404 });
+            return NextResponse.json(
+                { message: "User not found" },
+                { status: 404 }
+            );
         }
 
-        // Look for existing 1-on-1 chat
-        let chat = await Chat.findOne({
-            participants: { $all: [user._id, userId], $size: 2 },
-        });
+        let chatId = existingChat?._id;
 
-        if (!chat) {
-            chat = await Chat.create({
-                participants: [user._id, userId],
+        // Only create if it doesn't exist
+        if (!chatId) {
+            const created = await Chat.create({
+                participants: [userObjectId, otherObjectId],
             });
+            chatId = created._id;
         }
 
         return NextResponse.json({
             chat: {
-                id: chat._id.toString(),
+                id: chatId!.toString(),
                 other: {
-                    id: otherUser._id.toString(),
-                    name: otherUser.name,
-                    email: otherUser.email,
-                    avatar: otherUser.avatar,
+                    id: (otherUser as any)._id.toString(),
+                    name: (otherUser as any).name,
+                    email: (otherUser as any).email,
+                    avatar: (otherUser as any).avatar,
                 },
             },
         });

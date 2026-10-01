@@ -2,6 +2,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import jwt from "jsonwebtoken";
+import { Types } from "mongoose";
 
 import connectDB from "@/lib/mongo";
 import User from "@/models/user";
@@ -32,27 +33,31 @@ export default async function MessagesPage({
 
     await connectDB();
 
-    const currentUser = await User.findOne(
-        payload.id
-            ? { _id: payload.id }
-            : payload.userId
-                ? { _id: payload.userId }
-                : { email: payload.email }
-    )
-        .select("-password")
+    // Resolve current user in one query
+    const currentUserFilter = payload.id
+        ? { _id: payload.id }
+        : payload.userId
+            ? { _id: payload.userId }
+            : { email: payload.email };
+
+    const currentUser = await User.findOne(currentUserFilter)
+        .select("name email")
         .lean();
 
     if (!currentUser) redirect("/login");
 
     const userId = currentUser._id.toString();
+    const userObjectId = new Types.ObjectId(userId);
 
-    const chats = await Chat.find({ participants: userId })
+    const chats = await Chat.find({ participants: userObjectId })
         .sort({ updatedAt: -1 })
         .limit(50)
+        .select("participants lastMessage updatedAt")
         .populate("participants", "name email avatar")
         .populate({
             path: "lastMessage",
-            populate: { path: "sender", select: "name email" },
+            select: "content sender createdAt",
+            populate: { path: "sender", select: "name" },
         })
         .lean();
 

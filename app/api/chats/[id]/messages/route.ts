@@ -19,43 +19,66 @@ export async function GET(
     try {
         const user = await getCurrentUser();
         if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
         const { id } = await params;
+
+        // Guard against malformed IDs — prevents a CastError 500
+        if (!Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                { message: "Invalid chat id" },
+                { status: 400 }
+            );
+        }
+
         await connectDB();
 
-        const chat = await Chat.findById(id);
-        if (!chat) {
-            return NextResponse.json({ message: "Chat not found" }, { status: 404 });
-        }
+        const userObjectId = new Types.ObjectId(user._id);
+        const chatObjectId = new Types.ObjectId(id);
 
-        // ✅ Type the callback param explicitly
-        const isParticipant = chat.participants.some(
-            (p: Types.ObjectId) => p.toString() === user._id
-        );
-
-        if (!isParticipant) {
-            return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-        }
-
-        const messages = await Message.find({ chat: id })
-            .sort({ createdAt: 1 })
-            .limit(100)
-            .populate("sender", "name email avatar")
+        // Single query: confirm chat exists AND user is a participant
+        const chat = await Chat.findOne({
+            _id: chatObjectId,
+            participants: userObjectId,
+        })
+            .select("_id")
             .lean();
 
-        // ✅ Cast user._id to ObjectId for updateMany
-        await Message.updateMany(
-            { chat: id, readBy: { $ne: new Types.ObjectId(user._id) } },
-            { $addToSet: { readBy: new Types.ObjectId(user._id) } }
-        );
+        if (!chat) {
+            // Can't tell if it doesn't exist or user isn't a member.
+            // Returning 404 for both avoids leaking whether a chat exists.
+            return NextResponse.json(
+                { message: "Chat not found" },
+                { status: 404 }
+            );
+        }
+
+        // Fetch messages and mark-as-read in parallel
+        const [messages] = await Promise.all([
+            Message.find({ chat: chatObjectId })
+                .sort({ createdAt: 1 })
+                .limit(100)
+                .select("content createdAt sender readBy")
+                .populate("sender", "name avatar")
+                .lean(),
+
+            Message.updateMany(
+                { chat: chatObjectId, readBy: { $ne: userObjectId } },
+                { $addToSet: { readBy: userObjectId } }
+            ),
+        ]);
+
+        const userId = user._id;
 
         const mapped = messages.map((m: any) => ({
             id: m._id.toString(),
             content: m.content,
             createdAt: m.createdAt,
-            isMine: m.sender?._id?.toString() === user._id,
+            isMine: m.sender?._id?.toString() === userId,
             sender: {
                 id: m.sender?._id?.toString(),
                 name: m.sender?.name ?? "Unknown",
@@ -83,10 +106,21 @@ export async function POST(
     try {
         const user = await getCurrentUser();
         if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
         const { id } = await params;
+
+        if (!Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                { message: "Invalid chat id" },
+                { status: 400 }
+            );
+        }
+
         const { content } = await req.json();
 
         if (!content || !content.trim()) {
@@ -105,34 +139,46 @@ export async function POST(
 
         await connectDB();
 
-        const chat = await Chat.findById(id);
+        const userObjectId = new Types.ObjectId(user._id);
+        const chatObjectId = new Types.ObjectId(id);
+
+        // Single query — same trick as GET
+        const chat = await Chat.findOne({
+            _id: chatObjectId,
+            participants: userObjectId,
+        })
+            .select("_id")
+            .lean();
+
         if (!chat) {
-            return NextResponse.json({ message: "Chat not found" }, { status: 404 });
+            return NextResponse.json(
+                { message: "Chat not found" },
+                { status: 404 }
+            );
         }
 
-        // ✅ Type the callback param
-        const isParticipant = chat.participants.some(
-            (p: Types.ObjectId) => p.toString() === user._id
-        );
-
-        if (!isParticipant) {
-            return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-        }
-
-        // ✅ Cast to ObjectId
+        // Create the message
         const message = await Message.create({
-            chat: new Types.ObjectId(id),
-            sender: new Types.ObjectId(user._id),
+            chat: chatObjectId,
+            sender: userObjectId,
             content: content.trim(),
-            readBy: [new Types.ObjectId(user._id)],
+            readBy: [userObjectId],
         });
 
-        chat.lastMessage = message._id as any;
-        chat.updatedAt = new Date();
-        await chat.save();
+        // Bump the chat's updatedAt + lastMessage in one atomic write
+        await Chat.updateOne(
+            { _id: chatObjectId },
+            {
+                $set: {
+                    lastMessage: message._id,
+                    updatedAt: new Date(),
+                },
+            }
+        );
 
+        // Populate the sender for the response
         const populated: any = await Message.findById(message._id)
-            .populate("sender", "name email avatar")
+            .populate("sender", "name avatar")
             .lean();
 
         return NextResponse.json(

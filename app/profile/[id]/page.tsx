@@ -6,7 +6,6 @@ import { Types } from "mongoose";
 
 import connectDB from "@/lib/mongo";
 import { User, Post } from "@/lib/models";
-import { getFollowingIds, getFollowerIds } from "@/lib/follow";
 import ProfileClient from "./ProfileClient";
 
 export const runtime = "nodejs";
@@ -36,52 +35,63 @@ export default async function ProfilePage({
 
     await connectDB();
 
-    const me = await User.findOne(
-        payload.id
-            ? { _id: payload.id }
-            : payload.userId
-                ? { _id: payload.userId }
-                : { email: payload.email }
-    )
-        .select("-password")
-        .lean();
+    const meFilter = payload.id
+        ? { _id: payload.id }
+        : payload.userId
+            ? { _id: payload.userId }
+            : { email: payload.email };
+
+    const targetObjectId = new Types.ObjectId(id);
+
+    // Parallel: fetch current user (with following+followers) and target user
+    const [me, user] = await Promise.all([
+        User.findOne(meFilter).select("following followers").lean(),
+        User.findById(targetObjectId)
+            .select(
+                "name email avatar bio followers following createdAt"
+            )
+            .lean(),
+    ]);
 
     if (!me) redirect("/login");
-
-    const user: any = await User.findById(id)
-        .select("name email avatar bio followers following createdAt")
-        .lean();
-
     if (!user) notFound();
 
     const userIdStr = me._id.toString();
+    const userIsMe = (user as any)._id.toString() === userIdStr;
 
-    const [myFollowing, myFollowers, posts, postCount] = await Promise.all([
-        getFollowingIds(userIdStr),
-        getFollowerIds(userIdStr),
-        Post.find({ author: id })
+    // Build sets locally — no extra DB round trips
+    const myFollowing = new Set(
+        (me.following ?? []).map((fid: any) => fid.toString())
+    );
+    const myFollowers = new Set(
+        (me.followers ?? []).map((fid: any) => fid.toString())
+    );
+
+    // Fetch posts and count in parallel — no need for the follow helpers
+    const [posts, postCount] = await Promise.all([
+        Post.find({ author: targetObjectId })
             .sort({ createdAt: -1 })
             .limit(20)
-            .populate("author", "name email avatar")
+            .select("content likes comments createdAt")
             .lean(),
-        Post.countDocuments({ author: id }),
+        Post.countDocuments({ author: targetObjectId }),
     ]);
 
     const profile = {
-        id: user._id.toString(),
-        name: user.name ?? "Unknown",
-        email: user.email ?? "",
-        avatar: user.avatar ?? "",
-        bio: user.bio ?? "",
-        followersCount: user.followers?.length ?? 0,
-        followingCount: user.following?.length ?? 0,
+        id: (user as any)._id.toString(),
+        name: (user as any).name ?? "Unknown",
+        email: (user as any).email ?? "",
+        avatar: (user as any).avatar ?? "",
+        bio: (user as any).bio ?? "",
+        followersCount: (user as any).followers?.length ?? 0,
+        followingCount: (user as any).following?.length ?? 0,
         postsCount: postCount,
-        joinedAt: user.createdAt
-            ? new Date(user.createdAt).toISOString()
+        joinedAt: (user as any).createdAt
+            ? new Date((user as any).createdAt).toISOString()
             : "",
-        isMe: user._id.toString() === userIdStr,
-        isFollowing: myFollowing.has(user._id.toString()),
-        followsMe: myFollowers.has(user._id.toString()),
+        isMe: userIsMe,
+        isFollowing: myFollowing.has((user as any)._id.toString()),
+        followsMe: myFollowers.has((user as any)._id.toString()),
     };
 
     const mappedPosts = posts.map((p: any) => ({

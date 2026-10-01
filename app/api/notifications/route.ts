@@ -1,7 +1,8 @@
 // app/api/notifications/route.ts
 import { NextResponse } from "next/server";
+import { Types } from "mongoose";
 import connectDB from "@/lib/mongo";
-import { Notification, Post } from "@/lib/models";
+import { Notification } from "@/lib/models";
 import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -15,7 +16,10 @@ export async function GET(req: Request) {
     try {
         const me = await getCurrentUser();
         if (!me) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
         await connectDB();
@@ -26,12 +30,23 @@ export async function GET(req: Request) {
             Math.max(1, parseInt(searchParams.get("limit") || "30", 10))
         );
 
-        const notifications = await Notification.find({ recipient: me._id })
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .populate("actor", "name email avatar")
-            .populate("post", "content")
-            .lean();
+        const recipientId = new Types.ObjectId(me._id);
+
+        // Fire notifications fetch + unread count in parallel
+        const [notifications, unreadCount] = await Promise.all([
+            Notification.find({ recipient: recipientId })
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .select("type read createdAt actor post")
+                .populate("actor", "name avatar")
+                .populate("post", "content")
+                .lean(),
+
+            Notification.countDocuments({
+                recipient: recipientId,
+                read: false,
+            }),
+        ]);
 
         const mapped = notifications.map((n: any) => ({
             id: n._id.toString(),
@@ -41,7 +56,6 @@ export async function GET(req: Request) {
             actor: {
                 id: n.actor?._id?.toString() ?? "",
                 name: n.actor?.name ?? "Someone",
-                email: n.actor?.email ?? "",
                 avatar: n.actor?.avatar ?? "",
             },
             post: n.post
@@ -51,11 +65,6 @@ export async function GET(req: Request) {
                 }
                 : null,
         }));
-
-        const unreadCount = await Notification.countDocuments({
-            recipient: me._id,
-            read: false,
-        });
 
         return NextResponse.json({ notifications: mapped, unreadCount });
     } catch (err) {
@@ -75,18 +84,32 @@ export async function PATCH(req: Request) {
     try {
         const me = await getCurrentUser();
         if (!me) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { message: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
         const body = await req.json();
 
         if (body?.action === "mark-all-read") {
             await connectDB();
-            await Notification.updateMany(
-                { recipient: me._id, read: false },
+
+            // Skip the write entirely if there's nothing to update.
+            // This is the most common case (user clicks the button
+            // when they've already read everything).
+            const result = await Notification.updateMany(
+                {
+                    recipient: new Types.ObjectId(me._id),
+                    read: false,
+                },
                 { $set: { read: true } }
             );
-            return NextResponse.json({ ok: true });
+
+            return NextResponse.json({
+                ok: true,
+                updated: result.modifiedCount,
+            });
         }
 
         return NextResponse.json(
