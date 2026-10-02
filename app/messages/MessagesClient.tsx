@@ -59,6 +59,13 @@ export default function MessagesClient({
     );
     const [showNewChat, setShowNewChat] = useState(false);
 
+    // ─── Delete state ───
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
+        null
+    );
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
     const bottomRef = useRef<HTMLDivElement>(null);
 
     const activeChat = chats.find((c) => c.id === activeId) ?? null;
@@ -100,6 +107,24 @@ export default function MessagesClient({
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
+    // Close any open delete menu when clicking outside
+    useEffect(() => {
+        if (!openMenuId) return;
+        const onClickAway = () => {
+            setOpenMenuId(null);
+            setConfirmingDeleteId(null);
+        };
+        window.addEventListener("click", onClickAway);
+        return () => window.removeEventListener("click", onClickAway);
+    }, [openMenuId]);
+
+    // Reset menu state when switching chats
+    useEffect(() => {
+        setOpenMenuId(null);
+        setConfirmingDeleteId(null);
+        setDeletingId(null);
+    }, [activeId]);
+
     async function sendMessage() {
         if (!text.trim() || !activeId || sending) return;
         setSending(true);
@@ -139,8 +164,7 @@ export default function MessagesClient({
                 );
                 return updated.sort(
                     (a, b) =>
-                        new Date(b.updatedAt).getTime() -
-                        new Date(a.updatedAt).getTime()
+                        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
                 );
             });
         } catch {
@@ -151,9 +175,57 @@ export default function MessagesClient({
         }
     }
 
+    /**
+     * Delete a message.
+     * Optimistically removes from local state and rolls back on failure.
+     */
+    async function handleDelete(messageId: string) {
+        if (deletingId) return;
+
+        // Close the menu IMMEDIATELY so it can't overlap anything during removal
+        setOpenMenuId(null);
+        setConfirmingDeleteId(null);
+        setDeletingId(messageId);
+
+        const previousMessages = messages;
+        const previousChats = chats;
+
+        // Optimistic removal
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+
+        setChats((prev) =>
+            prev.map((c) =>
+                c.id === activeId && c.lastMessage ? { ...c, lastMessage: null } : c
+            )
+        );
+
+        try {
+            const res = await fetch("/api/messages/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messageId }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                setMessages(previousMessages);
+                setChats(previousChats);
+                alert(data.message || "Failed to delete message");
+            }
+        } catch {
+            setMessages(previousMessages);
+            setChats(previousChats);
+            alert("Network error. Try again.");
+        } finally {
+            setDeletingId(null);
+        }
+    }
+
     function openChat(id: string) {
         setActiveId(id);
         setMobileShowChat(true);
+        setOpenMenuId(null);
+        setConfirmingDeleteId(null);
     }
 
     async function startChatWith(userId: string) {
@@ -179,9 +251,7 @@ export default function MessagesClient({
 
             setActiveId(data.chat.id);
             setMobileShowChat(true);
-            router.replace(`/messages?chat=${data.chat.id}`, {
-                scroll: false,
-            });
+            router.replace(`/messages?chat=${data.chat.id}`, { scroll: false });
         } catch {
             alert("Network error");
         }
@@ -189,7 +259,7 @@ export default function MessagesClient({
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/40 pb-28 lg:pb-0">
-            {/* Single ambient orb */}
+            {/* Ambient orb */}
             <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
                 <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[100px]" />
             </div>
@@ -198,10 +268,7 @@ export default function MessagesClient({
             <nav className="sticky top-0 z-40 border-b border-gray-100 bg-white/85 backdrop-blur-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14 sm:h-16">
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center gap-2"
-                        >
+                        <Link href="/dashboard" className="flex items-center gap-2">
                             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
                                 <svg
                                     className="w-4 h-4 sm:w-5 sm:h-5 text-white"
@@ -287,52 +354,33 @@ export default function MessagesClient({
                                 <ul className="py-2">
                                     {chats.map((c) => {
                                         const active = c.id === activeId;
-                                        const initial = (
-                                            c.other.name?.[0] ?? "U"
-                                        ).toUpperCase();
+                                        const initial = (c.other.name?.[0] ?? "U").toUpperCase();
 
                                         return (
-                                            <li
-                                                key={c.id}
-                                                className="px-2"
-                                            >
+                                            <li key={c.id} className="px-2">
                                                 <button
-                                                    onClick={() =>
-                                                        openChat(c.id)
-                                                    }
-                                                    className={`relative w-full flex items-center gap-3 px-3 py-2.5 my-0.5 text-left rounded-2xl transition-colors ${active
-                                                            ? "bg-indigo-50"
-                                                            : "hover:bg-gray-50"
+                                                    onClick={() => openChat(c.id)}
+                                                    className={`relative w-full flex items-center gap-3 px-3 py-2.5 my-0.5 text-left rounded-2xl transition-colors ${active ? "bg-indigo-50" : "hover:bg-gray-50"
                                                         }`}
                                                 >
-                                                    {/* Active left bar */}
                                                     {active && (
                                                         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-gradient-to-b from-indigo-500 to-purple-500" />
                                                     )}
 
-                                                    {/* Avatar with gradient ring */}
                                                     <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 flex-shrink-0 shadow-sm">
                                                         <div className="w-full h-full rounded-full overflow-hidden bg-white">
                                                             {c.other.avatar ? (
                                                                 // eslint-disable-next-line @next/next/no-img-element
                                                                 <img
-                                                                    src={
-                                                                        c.other
-                                                                            .avatar
-                                                                    }
-                                                                    alt={
-                                                                        c.other
-                                                                            .name
-                                                                    }
+                                                                    src={c.other.avatar}
+                                                                    alt={c.other.name}
                                                                     className="w-full h-full object-cover"
                                                                     loading="lazy"
                                                                 />
                                                             ) : (
                                                                 <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
                                                                     <span className="text-sm font-bold text-white">
-                                                                        {
-                                                                            initial
-                                                                        }
+                                                                        {initial}
                                                                     </span>
                                                                 </div>
                                                             )}
@@ -342,42 +390,24 @@ export default function MessagesClient({
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center justify-between gap-2">
                                                             <p
-                                                                className={`text-sm font-semibold truncate ${active
-                                                                        ? "text-indigo-700"
-                                                                        : "text-gray-900"
+                                                                className={`text-sm font-semibold truncate ${active ? "text-indigo-700" : "text-gray-900"
                                                                     }`}
                                                             >
-                                                                {
-                                                                    c.other
-                                                                        .name
-                                                                }
+                                                                {c.other.name}
                                                             </p>
                                                             {c.lastMessage && (
                                                                 <span className="text-[10px] text-gray-400 flex-shrink-0">
-                                                                    {timeAgo(
-                                                                        c
-                                                                            .lastMessage
-                                                                            .createdAt
-                                                                    )}
+                                                                    {timeAgo(c.lastMessage.createdAt)}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         <p
-                                                            className={`text-xs truncate mt-0.5 ${active
-                                                                    ? "text-indigo-500"
-                                                                    : "text-gray-500"
+                                                            className={`text-xs truncate mt-0.5 ${active ? "text-indigo-500" : "text-gray-500"
                                                                 }`}
                                                         >
                                                             {c.lastMessage
-                                                                ? `${c
-                                                                    .lastMessage
-                                                                    .isMine
-                                                                    ? "You: "
-                                                                    : ""
-                                                                }${c
-                                                                    .lastMessage
-                                                                    .content
-                                                                }`
+                                                                ? `${c.lastMessage.isMine ? "You: " : ""
+                                                                }${c.lastMessage.content}`
                                                                 : "No messages yet"}
                                                         </p>
                                                     </div>
@@ -423,9 +453,7 @@ export default function MessagesClient({
                                     {/* Chat header */}
                                     <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white">
                                         <button
-                                            onClick={() =>
-                                                setMobileShowChat(false)
-                                            }
+                                            onClick={() => setMobileShowChat(false)}
                                             className="md:hidden p-2 -ml-2 rounded-full text-gray-500 hover:bg-gray-100 active:scale-90 transition-transform"
                                             aria-label="Back"
                                         >
@@ -449,35 +477,23 @@ export default function MessagesClient({
                                         >
                                             <div className="relative w-10 h-10 rounded-full p-[2px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 shadow-sm">
                                                 <div className="w-full h-full rounded-full overflow-hidden bg-white">
-                                                    {activeChat.other
-                                                        .avatar ? (
+                                                    {activeChat.other.avatar ? (
                                                         // eslint-disable-next-line @next/next/no-img-element
                                                         <img
-                                                            src={
-                                                                activeChat
-                                                                    .other
-                                                                    .avatar
-                                                            }
-                                                            alt={
-                                                                activeChat
-                                                                    .other.name
-                                                            }
+                                                            src={activeChat.other.avatar}
+                                                            alt={activeChat.other.name}
                                                             className="w-full h-full object-cover"
                                                         />
                                                     ) : (
                                                         <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
                                                             <span className="text-xs font-bold text-white">
                                                                 {(
-                                                                    activeChat
-                                                                        .other
-                                                                        .name?.[0] ??
-                                                                    "U"
+                                                                    activeChat.other.name?.[0] ?? "U"
                                                                 ).toUpperCase()}
                                                             </span>
                                                         </div>
                                                     )}
                                                 </div>
-                                                {/* Static online dot */}
                                                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -486,9 +502,7 @@ export default function MessagesClient({
                                                 </p>
                                                 <p className="text-xs text-gray-500 truncate">
                                                     @
-                                                    {activeChat.other.email?.split(
-                                                        "@"
-                                                    )[0] ?? "user"}
+                                                    {activeChat.other.email?.split("@")[0] ?? "user"}
                                                 </p>
                                             </div>
                                         </Link>
@@ -522,34 +536,137 @@ export default function MessagesClient({
                                                 </p>
                                             </div>
                                         ) : (
-                                            messages.map((m) => (
-                                                <div
-                                                    key={m.id}
-                                                    className={`flex ${m.isMine
-                                                            ? "justify-end"
-                                                            : "justify-start"
-                                                        }`}
-                                                >
+                                            messages.map((m) => {
+                                                const isDeleting = deletingId === m.id;
+                                                const isMenuOpen = openMenuId === m.id;
+                                                const isConfirming = confirmingDeleteId === m.id;
+
+                                                return (
                                                     <div
-                                                        className={`group relative max-w-[75%] px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm ${m.isMine
-                                                                ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl rounded-br-md"
-                                                                : "bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-md"
+                                                        key={m.id}
+                                                        className={`group flex ${m.isMine ? "justify-end" : "justify-start"
                                                             }`}
                                                     >
-                                                        {m.content}
-                                                        <div
-                                                            className={`text-[10px] mt-1 ${m.isMine
-                                                                    ? "text-white/70"
-                                                                    : "text-gray-400"
-                                                                }`}
-                                                        >
-                                                            {timeAgo(
-                                                                m.createdAt
+                                                        <div className="relative max-w-[75%]">
+                                                            {/* Message bubble */}
+                                                            <div
+                                                                className={`relative px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm transition-opacity ${isDeleting ? "opacity-40" : "opacity-100"
+                                                                    } ${m.isMine
+                                                                        ? "bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl rounded-br-md"
+                                                                        : "bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-md"
+                                                                    }`}
+                                                            >
+                                                                {m.content}
+                                                                <div
+                                                                    className={`text-[10px] mt-1 ${m.isMine
+                                                                            ? "text-white/70"
+                                                                            : "text-gray-400"
+                                                                        }`}
+                                                                >
+                                                                    {timeAgo(m.createdAt)}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Kebab menu — only for own messages.
+                                  z-index placed above siblings so it doesn't
+                                  get blocked after a neighbour is deleted. */}
+                                                            {m.isMine && !isDeleting && (
+                                                                <div
+                                                                    className={`absolute top-1 z-30 ${"left-0 -translate-x-full pr-1"
+                                                                        } ${isMenuOpen
+                                                                            ? "opacity-100 pointer-events-auto"
+                                                                            : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto"
+                                                                        }`}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setOpenMenuId(isMenuOpen ? null : m.id)
+                                                                        }
+                                                                        aria-label="Message options"
+                                                                        className="p-1 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 active:scale-95 transition-all"
+                                                                    >
+                                                                        <svg
+                                                                            className="w-4 h-4"
+                                                                            fill="none"
+                                                                            stroke="currentColor"
+                                                                            viewBox="0 0 24 24"
+                                                                        >
+                                                                            <path
+                                                                                strokeLinecap="round"
+                                                                                strokeLinejoin="round"
+                                                                                strokeWidth={2}
+                                                                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                                                                            />
+                                                                        </svg>
+                                                                    </button>
+
+                                                                    {/* Dropdown */}
+                                                                    {isMenuOpen && (
+                                                                        <div className="absolute top-full mt-1 left-0 z-40 w-44 rounded-xl border border-gray-100 bg-white shadow-lg overflow-hidden">
+                                                                            {!isConfirming ? (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        setConfirmingDeleteId(m.id)
+                                                                                    }
+                                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                                                >
+                                                                                    <svg
+                                                                                        className="w-4 h-4"
+                                                                                        fill="none"
+                                                                                        stroke="currentColor"
+                                                                                        viewBox="0 0 24 24"
+                                                                                    >
+                                                                                        <path
+                                                                                            strokeLinecap="round"
+                                                                                            strokeLinejoin="round"
+                                                                                            strokeWidth={2}
+                                                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"
+                                                                                        />
+                                                                                    </svg>
+                                                                                    Delete
+                                                                                </button>
+                                                                            ) : (
+                                                                                <div className="p-2">
+                                                                                    <p className="text-xs text-gray-700 px-1 pb-2 font-medium">
+                                                                                        Delete this message?
+                                                                                    </p>
+                                                                                    <div className="flex gap-1">
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() =>
+                                                                                                handleDelete(m.id)
+                                                                                            }
+                                                                                            disabled={isDeleting}
+                                                                                            className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-white bg-red-500 hover:bg-red-600 active:scale-95 disabled:opacity-60 transition-all"
+                                                                                        >
+                                                                                            {isDeleting
+                                                                                                ? "Deleting…"
+                                                                                                : "Delete"}
+                                                                                        </button>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => {
+                                                                                                setConfirmingDeleteId(null);
+                                                                                                setOpenMenuId(null);
+                                                                                            }}
+                                                                                            className="flex-1 px-2 py-1.5 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all"
+                                                                                        >
+                                                                                            Cancel
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))
+                                                );
+                                            })
                                         )}
                                         <div ref={bottomRef} />
                                     </div>
@@ -558,14 +675,9 @@ export default function MessagesClient({
                                     <div className="border-t border-gray-100 p-3 flex items-center gap-2 bg-white">
                                         <input
                                             value={text}
-                                            onChange={(e) =>
-                                                setText(e.target.value)
-                                            }
+                                            onChange={(e) => setText(e.target.value)}
                                             onKeyDown={(e) => {
-                                                if (
-                                                    e.key === "Enter" &&
-                                                    !e.shiftKey
-                                                ) {
+                                                if (e.key === "Enter" && !e.shiftKey) {
                                                     e.preventDefault();
                                                     sendMessage();
                                                 }
@@ -576,9 +688,7 @@ export default function MessagesClient({
                                         />
                                         <button
                                             onClick={sendMessage}
-                                            disabled={
-                                                sending || !text.trim()
-                                            }
+                                            disabled={sending || !text.trim()}
                                             className="px-5 py-2.5 rounded-full text-white text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-transform flex items-center gap-1.5"
                                         >
                                             {sending ? (

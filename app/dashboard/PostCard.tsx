@@ -1,6 +1,6 @@
 // app/dashboard/PostCard.tsx
 "use client";
-
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
@@ -19,6 +19,8 @@ export type PostCardProps = {
     commentsCount: number;
     sharesCount: number;
     isOwner: boolean;
+    /** Set true only for the first card in the feed — makes the browser download it eagerly. */
+    priority?: boolean;
 };
 
 type Comment = {
@@ -41,6 +43,7 @@ export default function PostCard({
     commentsCount,
     sharesCount,
     isOwner,
+    priority = false,
 }: PostCardProps) {
     const router = useRouter();
 
@@ -59,9 +62,7 @@ export default function PostCard({
         setLikes((n) => n + (next ? 1 : -1));
 
         try {
-            const res = await fetch(`/api/posts/${id}/like`, {
-                method: "POST",
-            });
+            const res = await fetch(`/api/posts/${id}/like`, { method: "POST" });
             if (!res.ok) {
                 setLiked(!next);
                 setLikes((n) => n + (next ? -1 : 1));
@@ -193,9 +194,7 @@ export default function PostCard({
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-xs text-gray-400">
-                                        {createdAt}
-                                    </span>
+                                    <span className="text-xs text-gray-400">{createdAt}</span>
                                     <span className="text-gray-300">·</span>
                                     <svg
                                         className="w-3 h-3 text-gray-400"
@@ -246,16 +245,18 @@ export default function PostCard({
                     </p>
                 )}
 
-                {/* ─── IMAGE ─── */}
+                {/* ─── IMAGE (optimized with next/image) ─── */}
                 {image && (
                     <div className="mt-3 -mx-4 sm:-mx-5">
-                        <div className="relative overflow-hidden bg-gray-50">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                        <div className="relative overflow-hidden bg-gray-100 aspect-[3/2]">
+                            <Image
                                 src={image}
                                 alt="Post image"
-                                className="w-full max-h-[500px] object-cover"
-                                loading="lazy"
+                                fill
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 66vw, 700px"
+                                className="object-cover"
+                                priority={priority}
+                                loading={priority ? "eager" : "lazy"}
                             />
                         </div>
                     </div>
@@ -375,10 +376,7 @@ export default function PostCard({
                                     </p>
                                 ) : (
                                     commentList.map((c) => (
-                                        <div
-                                            key={c.id}
-                                            className="flex items-start gap-2.5"
-                                        >
+                                        <div key={c.id} className="flex items-start gap-2.5">
                                             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm">
                                                 {c.user.avatar ? (
                                                     // eslint-disable-next-line @next/next/no-img-element

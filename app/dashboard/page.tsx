@@ -11,7 +11,7 @@ import PostComposer from "./PostComposer";
 import PostCard from "./PostCard";
 import SidebarLinks from "./SidebarLinks";
 import MobileNav from "./MobileNav";
-import { User, Post, Chat, Notification, Message } from "@/lib/models";
+import { User, Post, Chat, Notification } from "@/lib/models";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,8 +84,7 @@ export default async function Dashboard() {
         createdAt: timeAgo(p.createdAt),
         likesCount: p.likes?.length ?? 0,
         likedByMe:
-            p.likes?.some((uid: any) => uid.toString() === userId.toString()) ??
-            false,
+            p.likes?.some((uid: any) => uid.toString() === userId.toString()) ?? false,
         commentsCount: p.comments?.length ?? 0,
         sharesCount: p.sharesCount ?? 0,
         isOwner: p.author?._id?.toString() === userId.toString(),
@@ -137,20 +136,33 @@ export default async function Dashboard() {
     const currentUserId = currentUser._id.toString();
 
     return (
-        <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/40 pb-28 lg:pb-0">
-            {/* Single ambient orb — cheap and subtle */}
+        <div className="relative min-h-screen bg-slate-50 pb-28 lg:pb-0">
+            {/* ================= AMBIENT BACKGROUND ================= */}
             <div className="pointer-events-none fixed inset-0 overflow-hidden -z-0">
                 <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-200/40 blur-[100px]" />
+                <div className="absolute -top-32 right-0 w-[28rem] h-[28rem] rounded-full bg-purple-200/30 blur-[110px]" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[32rem] h-[32rem] rounded-full bg-pink-100/40 blur-[120px]" />
+
+                <div
+                    className="absolute inset-0 opacity-[0.015]"
+                    style={{
+                        backgroundImage:
+                            "linear-gradient(rgba(99,102,241,0.6) 1px, transparent 1px)," +
+                            "linear-gradient(90deg, rgba(99,102,241,0.6) 1px, transparent 1px)",
+                        backgroundSize: "64px 64px",
+                        maskImage:
+                            "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+                        WebkitMaskImage:
+                            "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+                    }}
+                />
             </div>
 
             {/* ================= NAVBAR ================= */}
-            <nav className="sticky top-0 z-40 border-b border-white/40 bg-white/70 backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+            <nav className="sticky top-0 z-40 border-b border-white/40 bg-white/70 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14 sm:h-16">
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center gap-2 flex-shrink-0"
-                        >
+                        <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0">
                             <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-300/40">
                                 <svg
                                     className="w-4 h-4 sm:w-5 sm:h-5 text-white"
@@ -196,7 +208,7 @@ export default async function Dashboard() {
                                     type="text"
                                     name="q"
                                     placeholder="Search people, posts..."
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-300 transition-all"
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-300 transition-all"
                                 />
                             </div>
                         </form>
@@ -242,9 +254,7 @@ export default async function Dashboard() {
                                 </svg>
                                 {unreadNotifications > 0 && (
                                     <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-gradient-to-br from-red-500 to-rose-500 rounded-full border-2 border-white text-[9px] font-bold text-white shadow-sm">
-                                        {unreadNotifications > 9
-                                            ? "9+"
-                                            : unreadNotifications}
+                                        {unreadNotifications > 9 ? "9+" : unreadNotifications}
                                     </span>
                                 )}
                             </Link>
@@ -282,15 +292,11 @@ export default async function Dashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
                     {/* ---------------- LEFT: PROFILE ---------------- */}
                     <aside className="lg:col-span-3 space-y-4 order-2 lg:order-1">
-                        <div className="group relative rounded-3xl bg-white/85 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
-                            {/* Thin accent line */}
-                            <div className="h-1 bg-gradient-to-r from-indigo-500/50 via-purple-500/70 to-pink-500/50" />
+                        <div className="group relative rounded-3xl bg-white/90 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden backdrop-blur-xl">
+                            <div className="h-1 bg-gradient-to-r from-indigo-500/70 via-purple-500/90 to-pink-500/70" />
 
                             <div className="px-4 sm:px-5 pt-6 pb-4 sm:pb-5">
-                                <Link
-                                    href="/profile"
-                                    className="flex justify-center mb-3"
-                                >
+                                <Link href="/profile" className="flex justify-center mb-3">
                                     <div className="relative">
                                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full p-[3px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 shadow-md transition-transform duration-300 hover:scale-105">
                                             <div className="w-full h-full rounded-full overflow-hidden bg-white">
@@ -310,8 +316,10 @@ export default async function Dashboard() {
                                                 )}
                                             </div>
                                         </div>
-                                        {/* Static online dot — no ping */}
-                                        <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
+                                        <span className="absolute bottom-1 right-1 flex h-3.5 w-3.5">
+                                            <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+                                            <span className="relative inline-flex w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
+                                        </span>
                                     </div>
                                 </Link>
 
@@ -326,8 +334,7 @@ export default async function Dashboard() {
                                         {userHandle}
                                     </p>
                                     <p className="text-xs sm:text-sm text-gray-600 mt-2 sm:mt-3 leading-relaxed line-clamp-2 italic">
-                                        {currentUser.bio ||
-                                            "Welcome to your dashboard 👋"}
+                                        {currentUser.bio || "Welcome to your dashboard 👋"}
                                     </p>
                                 </div>
 
@@ -345,9 +352,7 @@ export default async function Dashboard() {
                                         className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors"
                                     >
                                         <p className="text-base sm:text-lg font-bold text-indigo-600">
-                                            {formatCount(
-                                                currentUser.followers?.length ?? 0
-                                            )}
+                                            {formatCount(currentUser.followers?.length ?? 0)}
                                         </p>
                                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium">
                                             Followers
@@ -358,9 +363,7 @@ export default async function Dashboard() {
                                         className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors"
                                     >
                                         <p className="text-base sm:text-lg font-bold text-indigo-600">
-                                            {formatCount(
-                                                currentUser.following?.length ?? 0
-                                            )}
+                                            {formatCount(currentUser.following?.length ?? 0)}
                                         </p>
                                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium">
                                             Following
@@ -370,14 +373,14 @@ export default async function Dashboard() {
 
                                 <Link
                                     href="/profile/edit"
-                                    className="block text-center w-full mt-4 sm:mt-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-200/60 hover:from-indigo-700 hover:to-purple-700 active:scale-[0.98] transition-all"
+                                    className="block text-center w-full mt-4 sm:mt-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs sm:text-sm font-semibold shadow-md shadow-indigo-200/60 hover:shadow-lg active:scale-[0.98] transition-all"
                                 >
                                     Edit Profile
                                 </Link>
                             </div>
                         </div>
 
-                        <div className="hidden lg:block rounded-3xl bg-white/85 border border-gray-100 shadow-sm p-3">
+                        <div className="hidden lg:block rounded-3xl bg-white/90 border border-gray-100 shadow-sm p-3 backdrop-blur-xl">
                             <SidebarLinks
                                 unreadNotifications={unreadNotifications}
                                 unreadMessages={unreadMessages}
@@ -387,10 +390,7 @@ export default async function Dashboard() {
 
                     {/* ---------------- CENTER: FEED ---------------- */}
                     <section className="lg:col-span-6 space-y-3 sm:space-y-4 order-1 lg:order-2">
-                        <PostComposer
-                            userInitial={userInitial}
-                            userAvatar={userAvatar}
-                        />
+                        <PostComposer userInitial={userInitial} userAvatar={userAvatar} />
 
                         {mappedPosts.length === 0 ? (
                             <EmptyState
@@ -398,15 +398,13 @@ export default async function Dashboard() {
                                 message="When you or people you follow post something, it will appear here."
                             />
                         ) : (
-                            mappedPosts.map((post) => (
-                                <PostCard key={post.id} {...post} />
-                            ))
+                            mappedPosts.map((post) => <PostCard key={post.id} {...post} />)
                         )}
                     </section>
 
-                    {/* ---------------- RIGHT: NOTIFICATIONS + MESSAGES ---------------- */}
+                    {/* ---------------- RIGHT ---------------- */}
                     <aside className="lg:col-span-3 space-y-4 order-3">
-                        <div className="rounded-3xl bg-white/85 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-5">
+                        <div className="rounded-3xl bg-white/90 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
                                 <h3 className="text-sm sm:text-base font-bold text-gray-900">
                                     Notifications
@@ -419,9 +417,7 @@ export default async function Dashboard() {
                             </div>
                             {mappedNotifications.length === 0 ? (
                                 <div className="py-6 text-center">
-                                    <p className="text-xs text-gray-400">
-                                        No notifications yet
-                                    </p>
+                                    <p className="text-xs text-gray-400">No notifications yet</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3 sm:space-y-4">
@@ -438,7 +434,7 @@ export default async function Dashboard() {
                             </Link>
                         </div>
 
-                        <div className="rounded-3xl bg-white/85 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-5">
+                        <div className="rounded-3xl bg-white/90 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl">
                             <div className="flex items-center justify-between mb-3 sm:mb-4">
                                 <h3 className="text-sm sm:text-base font-bold text-gray-900">
                                     Messages
@@ -451,9 +447,7 @@ export default async function Dashboard() {
                             </div>
                             {mappedMessages.length === 0 ? (
                                 <div className="py-6 text-center">
-                                    <p className="text-xs text-gray-400">
-                                        No messages yet
-                                    </p>
+                                    <p className="text-xs text-gray-400">No messages yet</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2 sm:space-y-3">
@@ -545,8 +539,8 @@ function pickColor(seed: string): string {
 
 function EmptyState({ title, message }: { title: string; message: string }) {
     return (
-        <div className="relative rounded-3xl bg-white/85 border border-gray-100 shadow-sm p-8 sm:p-10 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-3">
+        <div className="relative rounded-3xl bg-white/90 border border-gray-100 shadow-sm p-8 sm:p-10 text-center backdrop-blur-xl">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-3 ring-1 ring-indigo-200/40">
                 <svg
                     className="w-8 h-8 text-indigo-400"
                     fill="none"
@@ -562,9 +556,7 @@ function EmptyState({ title, message }: { title: string; message: string }) {
                 </svg>
             </div>
             <p className="text-sm font-semibold text-gray-800">{title}</p>
-            <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-                {message}
-            </p>
+            <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">{message}</p>
         </div>
     );
 }
@@ -592,18 +584,12 @@ function NotificationItem({
             <div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm">
                 {avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                        src={avatar}
-                        alt={name}
-                        className="w-full h-full object-cover"
-                    />
+                    <img src={avatar} alt={name} className="w-full h-full object-cover" />
                 ) : (
                     <div
                         className={`w-full h-full bg-gradient-to-br ${color} flex items-center justify-center`}
                     >
-                        <span className="text-xs font-bold text-white">
-                            {initial}
-                        </span>
+                        <span className="text-xs font-bold text-white">{initial}</span>
                     </div>
                 )}
             </div>
@@ -612,9 +598,7 @@ function NotificationItem({
                     <span className="font-semibold text-gray-900">{name}</span>{" "}
                     <span className="text-gray-600">{action}</span>
                 </p>
-                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
-                    {time}
-                </p>
+                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{time}</p>
             </div>
         </Link>
     );
@@ -646,18 +630,12 @@ function MessageItem({
                 <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
                     {avatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={avatar}
-                            alt={name}
-                            className="w-full h-full object-cover"
-                        />
+                        <img src={avatar} alt={name} className="w-full h-full object-cover" />
                     ) : (
                         <div
                             className={`w-full h-full bg-gradient-to-br ${color} flex items-center justify-center`}
                         >
-                            <span className="text-xs font-bold text-white">
-                                {initial}
-                            </span>
+                            <span className="text-xs font-bold text-white">{initial}</span>
                         </div>
                     )}
                 </div>

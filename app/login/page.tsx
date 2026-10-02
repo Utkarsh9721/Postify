@@ -1,15 +1,99 @@
 // app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
+/* ============================================================================
+   Google Sign-In button — GIS renders a fixed-pixel-width iframe, so we
+   measure the container and pass the real width to keep it full-bleed.
+   ============================================================================ */
+function GoogleSignInButton({
+    onSuccess,
+    onError,
+    text = "continue_with",
+}: {
+    onSuccess: (credential: string) => void;
+    onError: (message: string) => void;
+    text?: "signin_with" | "signup_with" | "continue_with";
+}) {
+    const buttonRef = useRef<HTMLDivElement>(null);
+    const initializedRef = useRef(false);
+
+    useEffect(() => {
+        if (initializedRef.current) return;
+
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            console.error("Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env.local");
+            onError("Google Sign-In is not configured.");
+            return;
+        }
+
+        const existing = document.querySelector<HTMLScriptElement>(
+            'script[src="https://accounts.google.com/gsi/client"]'
+        );
+
+        const initButton = () => {
+            if (!window.google || !buttonRef.current) return;
+
+            // GIS takes a pixel width (200–400). Measure the container so the
+            // button fills the card instead of sitting at a fixed 320px.
+            const wrapperWidth = buttonRef.current.offsetWidth || 320;
+            const width = Math.max(200, Math.min(400, Math.floor(wrapperWidth)));
+
+            window.google.accounts.id.initialize({
+                client_id: clientId,
+                callback: (response) => onSuccess(response.credential),
+            });
+
+            window.google.accounts.id.renderButton(buttonRef.current, {
+                theme: "filled_black",
+                size: "large",
+                shape: "pill",
+                text,
+                logo_alignment: "left",
+                width,
+            });
+
+            initializedRef.current = true;
+        };
+
+        if (existing) {
+            if (window.google) initButton();
+            else existing.addEventListener("load", initButton);
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = initButton;
+        script.onerror = () => onError("Failed to load Google Sign-In.");
+        document.body.appendChild(script);
+    }, [onSuccess, onError, text]);
+
+    return (
+        <div
+            ref={buttonRef}
+            className="w-full [&>div]:!w-full [&>div>div]:!w-full [&_iframe]:!w-full"
+            style={{ minHeight: 44 }}
+        />
+    );
+}
+
+/* ============================================================================
+   Page
+   ============================================================================ */
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
+    /* ---------- Existing email/password flow — unchanged ---------- */
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault();
         setIsLoading(true);
@@ -35,15 +119,36 @@ export default function LoginPage() {
         }
     }
 
+    /* ---------- Google flow ---------- */
+    async function handleGoogleSuccess(credential: string) {
+        setGoogleLoading(true);
+        try {
+            const response = await fetch("/api/auth/google", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credential }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                window.location.href = "/dashboard";
+            } else {
+                alert(data.message || "Google login failed");
+            }
+        } catch {
+            alert("Something went wrong. Please try again.");
+        } finally {
+            setGoogleLoading(false);
+        }
+    }
+
     return (
         <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 px-4 py-12">
-            {/* Static lamp glow — pure CSS, no JS, no blur animation */}
+            {/* Static lamp glow */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-64 -z-0 overflow-hidden">
-                {/* Glow bar */}
                 <div className="absolute top-12 left-1/2 -translate-x-1/2 w-[500px] max-w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
-                {/* Blurred halo behind the bar */}
                 <div className="absolute top-8 left-1/2 -translate-x-1/2 w-[400px] max-w-full h-32 bg-gradient-to-b from-cyan-400/30 to-transparent blur-2xl" />
-                {/* Wide soft glow */}
                 <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[600px] max-w-full h-40 bg-cyan-500/20 blur-3xl rounded-full" />
             </div>
 
@@ -193,7 +298,7 @@ export default function LoginPage() {
                         {/* Submit */}
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || googleLoading}
                             className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm sm:text-base font-semibold shadow-lg shadow-cyan-500/30 hover:from-cyan-400 hover:to-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
                         >
                             {isLoading ? (
@@ -217,15 +322,58 @@ export default function LoginPage() {
                                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                         />
                                     </svg>
-                                    <span className="text-sm sm:text-base">
-                                        Signing in...
-                                    </span>
+                                    <span className="text-sm sm:text-base">Signing in...</span>
                                 </>
                             ) : (
                                 "Sign in"
                             )}
                         </button>
                     </form>
+
+                    {/* ================= DIVIDER ================= */}
+                    <div className="relative my-5 sm:my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-700" />
+                        </div>
+                        <div className="relative flex justify-center">
+                            <span className="bg-slate-900/60 px-3 text-[10px] sm:text-[11px] font-medium uppercase tracking-widest text-slate-500">
+                                or continue with
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* ================= GOOGLE SIGN-IN ================= */}
+                    <div className="relative">
+                        <GoogleSignInButton
+                            onSuccess={handleGoogleSuccess}
+                            onError={(msg) => alert(msg)}
+                            text="continue_with"
+                        />
+
+                        {googleLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-900/80">
+                                <svg
+                                    className="animate-spin w-5 h-5 text-cyan-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                    />
+                                    <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    />
+                                </svg>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Sign up link */}

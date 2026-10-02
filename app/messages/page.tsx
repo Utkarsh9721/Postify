@@ -7,7 +7,10 @@ import { Types } from "mongoose";
 import connectDB from "@/lib/mongo";
 import User from "@/models/user";
 import Chat from "@/models/Chat";
+import Message from "@/models/Message";
 import MessagesClient from "./MessagesClient";
+
+void Message;  // ← ADD THIS — prevents Turbopack from dropping the import
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +36,6 @@ export default async function MessagesPage({
 
     await connectDB();
 
-    // Resolve current user in one query
     const currentUserFilter = payload.id
         ? { _id: payload.id }
         : payload.userId

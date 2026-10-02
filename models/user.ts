@@ -5,9 +5,10 @@ export interface IUser {
     _id: Types.ObjectId;
     name: string;
     email: string;
-    password: string;
+    password?: string;         // ← optional now (Google users have no password)
     bio?: string;
     avatar?: string;
+    provider?: "credentials" | "google";  // ← new: distinguishes auth method
     followers: Types.ObjectId[];
     following: Types.ObjectId[];
     createdAt: Date;
@@ -32,7 +33,7 @@ const UserSchema = new Schema<IUser>(
 
         password: {
             type: String,
-            required: true,
+            required: false,        // ← FIX: was `true`
         },
 
         bio: {
@@ -44,6 +45,13 @@ const UserSchema = new Schema<IUser>(
         avatar: {
             type: String,
             default: "",
+        },
+
+        // Which auth method created this account
+        provider: {
+            type: String,
+            enum: ["credentials", "google"],
+            default: "credentials",
         },
 
         // Social graph

@@ -1,10 +1,11 @@
 // app/layout.tsx
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ParticlesInit } from "@/components/ParticlesInit";
 import { Providers } from "./providers";
-import { ScrollToTop } from "@/components/ScrollToTop";   // ← new
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,7 +22,11 @@ export const metadata: Metadata = {
   description: "Connect, share, and engage.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <html
       lang="en"
@@ -30,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Providers>
-          <ScrollToTop />                                {/* ← new */}
+          <ScrollToTop />
           <ParticlesInit>{children}</ParticlesInit>
         </Providers>
       </body>
