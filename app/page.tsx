@@ -3,14 +3,16 @@
 
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import ErrorBoundary from "./ErrorBoundary";
 import { AnimatedTestimonials } from "@/components/ui/animated-testimonials";
 import Carousel from "@/components/ui/carousel";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
+import Video from "@/app/assets/de.mp4";
+import BlackHole from "@/app/assets/blackHole.mp4";
 
 /* ==========================================================================
-   Below-the-fold components — lazy-loaded so they don't block first paint.
+   Lazy-loaded heavy components
    ========================================================================== */
 
 const SparklesCore = dynamic(
@@ -24,11 +26,15 @@ const Globe3D = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex h-full items-center justify-center">
-        <div className="h-48 w-48 animate-pulse rounded-full bg-indigo-500/20" />
+        <div className="h-28 w-28 sm:h-40 sm:w-40 animate-pulse rounded-full bg-indigo-500/20" />
       </div>
     ),
   }
 );
+
+/* ==========================================================================
+   Data
+   ========================================================================== */
 
 const globeMarkers = [
   { lat: 40.7128, lng: -74.006, src: "https://ui-avatars.com/api/?name=NY&background=6366f1&color=fff", label: "New York" },
@@ -50,6 +56,58 @@ const testimonials = [
   { quote: "The cleanest interface I've used. My engagement has never been higher.", name: "Emma Wilson", designation: "Content Creator", src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80" },
 ];
 
+const features = [
+  {
+    title: "Instant messaging",
+    body: "Messages arrive the moment you hit send. No refreshing, no waiting, no loading spinners.",
+    span: "md:col-span-2",
+    accent: "indigo",
+    icon: (
+      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Zero ads",
+    body: "Your feed, your rules. No promoted posts, no tracking pixels.",
+    accent: "pink",
+    icon: (
+      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      </svg>
+    ),
+  },
+  {
+    title: "End-to-end",
+    body: "Private by default. Your data stays yours.",
+    accent: "emerald",
+    icon: (
+      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Global reach",
+    body: "Connect with anyone, anywhere. Postify works in over 40 countries with zero latency.",
+    span: "md:col-span-2",
+    accent: "cyan",
+    icon: (
+      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+      </svg>
+    ),
+  },
+];
+
+const accentMap: Record<string, { gradient: string; glow: string }> = {
+  indigo: { gradient: "from-indigo-500 to-purple-600", glow: "bg-indigo-500/10 group-hover:bg-indigo-500/20" },
+  pink: { gradient: "from-pink-500 to-rose-600", glow: "bg-pink-500/10 group-hover:bg-pink-500/20" },
+  emerald: { gradient: "from-emerald-500 to-teal-600", glow: "bg-emerald-500/10 group-hover:bg-emerald-500/20" },
+  cyan: { gradient: "from-cyan-500 to-blue-600", glow: "bg-cyan-500/10 group-hover:bg-cyan-500/20" },
+};
+
 /* ==========================================================================
    Hooks
    ========================================================================== */
@@ -66,7 +124,6 @@ function useNarrow(query = "(max-width: 767px)") {
   return narrow;
 }
 
-/** Fires once when the ref's element enters `rootMargin` of the viewport. */
 function useInViewOnce<T extends HTMLElement>(rootMargin = "400px") {
   const ref = useRef<T | null>(null);
   const [seen, setSeen] = useState(false);
@@ -83,76 +140,89 @@ function useInViewOnce<T extends HTMLElement>(rootMargin = "400px") {
   return [ref, seen] as const;
 }
 
+function useInViewPlayback<T extends HTMLVideoElement>(rootMargin = "200px") {
+  const ref = useRef<T | null>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) { v.pause(); return; }
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) v.play().catch(() => { });
+        else v.pause();
+      },
+      { rootMargin, threshold: 0.01 }
+    );
+    io.observe(v);
+    return () => io.disconnect();
+  }, [rootMargin]);
+  return ref;
+}
+
 /* ==========================================================================
    Page
    ========================================================================== */
 
 export default function Home() {
   const narrow = useNarrow();
+  const reduce = useReducedMotion();
 
-  // Below-the-fold heavy components — mounted only when near viewport.
   const [globeRef, showGlobe] = useInViewOnce<HTMLDivElement>("400px");
   const [carouselRef, showCarousel] = useInViewOnce<HTMLDivElement>("500px");
   const [testimonialsRef, showTestimonials] = useInViewOnce<HTMLDivElement>("500px");
   const [ctaRef, showSparkles] = useInViewOnce<HTMLDivElement>("400px");
 
+  const heroVideoRef = useInViewPlayback<HTMLVideoElement>("300px");
+  const globeVideoRef = useInViewPlayback<HTMLVideoElement>("300px");
+
   return (
     <main className="min-h-screen bg-black text-white selection:bg-indigo-500/30 overflow-x-hidden">
-      {/* ================= HERO — STATIC GRADIENT + AURORA ================= */}
-      <section className="relative min-h-screen w-full overflow-hidden bg-black">
-        {/* Deep radial base — instant paint, no JS */}
+      {/* ================= HERO ================= */}
+      <section className="relative min-h-[100svh] w-full overflow-hidden bg-black">
         <div
           aria-hidden
           className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a0a2e_0%,_#000_70%)]"
         />
 
-        {/* Aurora glow — layered radial gradients, pure CSS */}
+        <video
+          ref={heroVideoRef}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          controls={false}
+          disablePictureInPicture
+          aria-hidden="true"
+        >
+          <source src={Video} type="video/mp4" />
+        </video>
+
         <div
           aria-hidden
-          className="absolute inset-0 opacity-70"
-          style={{
-            background:
-              "radial-gradient(ellipse 60% 40% at 20% 30%, rgba(99,102,241,0.25) 0%, transparent 60%)," +
-              "radial-gradient(ellipse 50% 35% at 80% 70%, rgba(168,85,247,0.22) 0%, transparent 60%)," +
-              "radial-gradient(ellipse 40% 30% at 50% 90%, rgba(236,72,153,0.18) 0%, transparent 60%)",
-          }}
+          className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black/80 md:bg-gradient-to-r md:from-black/85 md:via-black/55 md:to-black/30"
         />
 
-        {/* Fine grain — breaks up the gradient banding */}
         <div
           aria-hidden
-          className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-          }}
+          className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent"
         />
 
-        {/* Subtle grid lines for a "space" feel */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.035]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px)," +
-              "linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
-            maskImage:
-              "radial-gradient(ellipse at center, black 30%, transparent 75%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse at center, black 30%, transparent 75%)",
-          }}
-        />
-
-        {/* Hero copy — pure CSS animation (main-thread free) */}
-        <div className="relative z-10 mx-auto flex h-full min-h-screen w-full max-w-7xl flex-col justify-start px-4 pt-24 sm:px-6 md:justify-center md:pt-0 lg:px-8">
+        <div className="relative z-10 mx-auto flex h-full min-h-[100svh] w-full max-w-7xl flex-col justify-start px-5 pt-24 pb-16 sm:px-6 md:justify-center md:pt-0 lg:px-8">
           <div
             className="max-w-2xl text-center md:text-left"
-            style={{ animation: "hero-in 600ms ease-out both" }}
+            style={{ animation: reduce ? "none" : "hero-in 600ms ease-out both" }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 mb-4 sm:mb-6 backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-              <span className="text-[10px] sm:text-xs font-medium text-white/70">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/50 px-3.5 py-1.5 mb-5 sm:mb-6 backdrop-blur-md">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-400" />
+              </span>
+              <span className="text-[11px] sm:text-xs font-medium text-white/80 tracking-wide">
                 Now in public beta
               </span>
             </div>
@@ -164,41 +234,42 @@ export default function Home() {
                 textColor="#ffffff"
                 duration={2}
                 startOnView={false}
-                className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] text-center md:text-left"
+                className="text-5xl xs:text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[0.92] text-center md:text-left"
               />
             </div>
 
-            <p className="mt-4 sm:mt-6 text-sm sm:text-base md:text-xl text-white/70 max-w-xl mx-auto md:mx-0 leading-relaxed">
+            <p className="mt-5 sm:mt-6 text-[15px] sm:text-base md:text-xl text-white/75 max-w-xl mx-auto md:mx-0 leading-relaxed">
               Where conversations happen. Share moments with friends, discover
               people who matter, and stay connected across the globe — all in
               one clean, fast, distraction-free space.
             </p>
 
-            <div className="mt-6 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-4 max-w-lg mx-auto md:mx-0">
-              <div>
-                <p className="text-lg sm:text-2xl font-bold text-white">40+</p>
-                <p className="text-[9px] sm:text-xs text-white/50 mt-0.5">Countries</p>
-              </div>
-              <div>
-                <p className="text-lg sm:text-2xl font-bold text-white">Real-time</p>
-                <p className="text-[9px] sm:text-xs text-white/50 mt-0.5">Messaging</p>
-              </div>
-              <div>
-                <p className="text-lg sm:text-2xl font-bold text-white">Private</p>
-                <p className="text-[9px] sm:text-xs text-white/50 mt-0.5">No ads</p>
-              </div>
+            <div className="mt-7 sm:mt-8 grid grid-cols-3 gap-3 max-w-lg mx-auto md:mx-0">
+              {[
+                { k: "40+", v: "Countries" },
+                { k: "Real-time", v: "Messaging" },
+                { k: "Private", v: "No ads" },
+              ].map((s) => (
+                <div
+                  key={s.v}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm px-2.5 py-2.5 sm:px-3 sm:py-3 text-center md:text-left"
+                >
+                  <p className="text-base sm:text-2xl font-bold text-white leading-none">{s.k}</p>
+                  <p className="text-[10px] sm:text-xs text-white/50 mt-1">{s.v}</p>
+                </div>
+              ))}
             </div>
 
-            <div className="mt-6 sm:mt-10 flex flex-col sm:flex-row flex-wrap justify-center md:justify-start gap-3">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap justify-center md:justify-start gap-3">
               <a
                 href="/login"
-                className="w-full sm:w-auto rounded-full bg-white px-6 sm:px-8 py-3.5 text-sm font-semibold text-black transition hover:scale-105 hover:bg-neutral-200 text-center"
+                className="inline-flex items-center justify-center w-full sm:w-auto min-h-[48px] rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-black transition hover:bg-neutral-200 active:scale-[0.98]"
               >
                 Login
               </a>
               <a
                 href="/register"
-                className="w-full sm:w-auto rounded-full border border-white/25 bg-black/40 backdrop-blur-sm px-6 sm:px-8 py-3.5 text-sm font-semibold text-white transition hover:scale-105 hover:border-white/50 hover:bg-black/60 text-center"
+                className="inline-flex items-center justify-center w-full sm:w-auto min-h-[48px] rounded-full border border-white/25 bg-white/[0.05] backdrop-blur-md px-7 py-3.5 text-sm font-semibold text-white transition hover:border-white/50 hover:bg-white/[0.1] active:scale-[0.98]"
               >
                 Create Account
               </a>
@@ -206,21 +277,56 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-2 text-white/40 pointer-events-none">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center gap-2 text-white/40 pointer-events-none">
           <span className="text-[10px] uppercase tracking-widest">Scroll</span>
           <div className="w-px h-8 bg-gradient-to-b from-white/40 to-transparent" />
         </div>
       </section>
 
-      {/* ================= GLOBE ================= */}
+      {/* ================= GLOBE + BLACK HOLE ================= */}
       <section
         className="relative border-t border-neutral-900 px-4 sm:px-6 py-16 sm:py-24 md:py-32"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "900px" }}
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
       >
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-10 sm:mb-16 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1 mb-4">
-              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#0f0518_0%,_#000_70%)]"
+        />
+
+        <video
+          ref={globeVideoRef}
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          controls={false}
+          disablePictureInPicture
+          aria-hidden="true"
+        >
+          <source src={BlackHole} type="video/mp4" />
+        </video>
+
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.62)_0%,_rgba(0,0,0,0.55)_50%,_rgba(0,0,0,0.35)_100%)]"
+        />
+
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black via-black/60 to-transparent"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/60 to-transparent"
+        />
+
+        <div className="relative z-10 mx-auto max-w-6xl">
+          {/* Header */}
+          <div className="mb-8 sm:mb-10 md:mb-16 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/50 px-3 py-1 mb-4 backdrop-blur-md">
+              <span className="text-[10px] font-medium text-neutral-200 uppercase tracking-widest">
                 Global Reach
               </span>
             </div>
@@ -230,29 +336,36 @@ export default function Home() {
                 text="Connect worldwide"
                 textColor="#ffffff"
                 duration={1.5}
-                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+                className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-center leading-[1.05]"
               />
             </div>
 
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
+            <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-200 max-w-xl mx-auto px-2">
               Live connections across 5 continents, zero latency.
             </p>
           </div>
 
+          {/* Globe — a narrower square on mobile so the sphere fits fully.
+              `overflow-visible` lets the WebGL canvas paint beyond the box. */}
           <motion.div
             ref={globeRef}
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, margin: "200px" }}
             transition={{ duration: 0.7, ease: "easeOut" }}
-            className="relative mx-auto h-[340px] xs:h-[380px] sm:h-[450px] md:h-[500px] lg:h-[600px] w-full max-w-3xl touch-none"
+            className="relative mx-auto aspect-square w-[80vw] max-w-[320px] sm:aspect-auto sm:h-[380px] sm:w-full sm:max-w-xl md:h-[460px] md:max-w-2xl lg:h-[560px] lg:max-w-3xl touch-none overflow-visible"
           >
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_center,_rgba(77,166,255,0.22)_0%,_transparent_60%)] blur-3xl pointer-events-none"
+            />
+
             {showGlobe ? (
               <ErrorBoundary
                 fallback={
                   <div className="flex h-full flex-col items-center justify-center gap-3 text-neutral-600">
-                    <div className="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
-                      <svg className="w-12 h-12 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="10" />
                         <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
                       </svg>
@@ -275,17 +388,29 @@ export default function Home() {
               </ErrorBoundary>
             ) : (
               <div className="flex h-full items-center justify-center">
-                <div className="h-40 w-40 sm:h-48 sm:w-48 animate-pulse rounded-full bg-indigo-500/20" />
+                <div className="h-28 w-28 sm:h-40 sm:w-40 animate-pulse rounded-full bg-indigo-500/20" />
               </div>
             )}
           </motion.div>
+
+          {/* City chips below the globe — mobile only */}
+          <div className="mt-6 flex flex-wrap justify-center gap-2 md:hidden">
+            {["New York", "London", "Tokyo", "Sydney", "New Delhi"].map((city) => (
+              <span
+                key={city}
+                className="rounded-full border border-white/10 bg-white/[0.06] backdrop-blur-md px-3 py-1.5 text-[11px] text-neutral-100"
+              >
+                {city}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ================= BENTO GRID ================= */}
+      {/* ================= FEATURES ================= */}
       <section
         className="relative border-t border-neutral-900 px-4 sm:px-6 py-16 sm:py-24 md:py-32"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "1000px" }}
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1600px" }}
       >
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 sm:mb-16 text-center">
@@ -300,99 +425,40 @@ export default function Home() {
                 text="Built for real people"
                 textColor="#ffffff"
                 duration={1.5}
-                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+                className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-center leading-[1.05]"
               />
             </div>
 
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
+            <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
               Every feature exists for a reason. No filler, no distractions.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "150px", amount: 0.1 }}
-              transition={{ duration: 0.5 }}
-              className="md:col-span-2 relative rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900/60 to-neutral-950 p-5 sm:p-8 overflow-hidden group"
-            >
-              <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl group-hover:bg-indigo-500/20 transition-colors duration-500" />
-              <div className="relative">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-3 sm:mb-4">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <h3 className="text-base sm:text-xl font-bold text-white">Instant messaging</h3>
-                <p className="mt-2 text-xs sm:text-sm text-neutral-400 max-w-md leading-relaxed">
-                  Messages arrive the moment you hit send. No refreshing, no waiting, no loading spinners.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "150px", amount: 0.1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="relative rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900/60 to-neutral-950 p-5 sm:p-8 overflow-hidden group"
-            >
-              <div className="absolute -bottom-16 -left-16 w-40 h-40 rounded-full bg-pink-500/10 blur-3xl group-hover:bg-pink-500/20 transition-colors duration-500" />
-              <div className="relative">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center mb-3 sm:mb-4">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-white">Zero ads</h3>
-                <p className="mt-2 text-xs sm:text-sm text-neutral-400 leading-relaxed">
-                  Your feed, your rules. No promoted posts, no tracking pixels.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "150px", amount: 0.1 }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="relative rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900/60 to-neutral-950 p-5 sm:p-8 overflow-hidden group"
-            >
-              <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-emerald-500/10 blur-3xl group-hover:bg-emerald-500/20 transition-colors duration-500" />
-              <div className="relative">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-3 sm:mb-4">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-white">End-to-end</h3>
-                <p className="mt-2 text-xs sm:text-sm text-neutral-400 leading-relaxed">
-                  Private by default. Your data stays yours.
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "150px", amount: 0.1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="md:col-span-2 relative rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900/60 to-neutral-950 p-5 sm:p-8 overflow-hidden group"
-            >
-              <div className="absolute -bottom-20 -left-20 w-60 h-60 rounded-full bg-cyan-500/10 blur-3xl group-hover:bg-cyan-500/20 transition-colors duration-500" />
-              <div className="relative">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mb-3 sm:mb-4">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-                  </svg>
-                </div>
-                <h3 className="text-base sm:text-xl font-bold text-white">Global reach</h3>
-                <p className="mt-2 text-xs sm:text-sm text-neutral-400 max-w-md leading-relaxed">
-                  Connect with anyone, anywhere. Postify works in over 40 countries with zero latency.
-                </p>
-              </div>
-            </motion.div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+            {features.map((f, i) => {
+              const acc = accentMap[f.accent];
+              return (
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "150px", amount: 0.1 }}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className={`${f.span ?? ""} relative rounded-2xl border border-neutral-800/80 bg-gradient-to-br from-neutral-900/70 to-neutral-950 p-6 sm:p-8 overflow-hidden group`}
+                >
+                  <div className={`absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl transition-colors duration-500 ${acc.glow}`} />
+                  <div className="relative">
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${acc.gradient} flex items-center justify-center mb-4 shadow-lg`}>
+                      {f.icon}
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white">{f.title}</h3>
+                    <p className="mt-2.5 text-sm text-neutral-400 max-w-md leading-relaxed">
+                      {f.body}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -401,26 +467,28 @@ export default function Home() {
       <section
         ref={carouselRef}
         className="relative border-t border-neutral-900 px-4 sm:px-6 py-16 sm:py-24 md:py-32"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
       >
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 sm:mb-16 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1 mb-4">
-              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Features</span>
+              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
+                Features
+              </span>
             </div>
             <div className="flex justify-center">
               <DiaTextReveal
                 text="Everything you need"
                 textColor="#ffffff"
                 duration={1.5}
-                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+                className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-center leading-[1.05]"
               />
             </div>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
+            <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
               Built for the way people actually talk. No bloat, no noise.
             </p>
           </div>
-          {showCarousel ? <Carousel slides={carouselSlides} /> : <div className="h-[420px]" />}
+          {showCarousel ? <Carousel slides={carouselSlides} /> : <div className="h-[380px] sm:h-[420px]" />}
         </div>
       </section>
 
@@ -428,29 +496,31 @@ export default function Home() {
       <section
         ref={testimonialsRef}
         className="relative border-t border-neutral-900 px-4 sm:px-6 py-16 sm:py-24 md:py-32"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "800px" }}
+        style={{ contentVisibility: "auto", containIntrinsicSize: "1200px" }}
       >
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 sm:mb-16 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/60 px-3 py-1 mb-4">
-              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">Testimonials</span>
+              <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
+                Testimonials
+              </span>
             </div>
             <div className="flex justify-center">
               <DiaTextReveal
                 text="Loved by creators"
                 textColor="#ffffff"
                 duration={1.5}
-                className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+                className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-center leading-[1.05]"
               />
             </div>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
+            <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-xl mx-auto px-2">
               Real feedback from people who use Postify every day.
             </p>
           </div>
           {showTestimonials ? (
             <AnimatedTestimonials testimonials={testimonials} />
           ) : (
-            <div className="h-[420px]" />
+            <div className="h-[380px] sm:h-[420px]" />
           )}
         </div>
       </section>
@@ -458,17 +528,17 @@ export default function Home() {
       {/* ================= CTA ================= */}
       <section
         ref={ctaRef}
-        className="relative border-t border-neutral-900 px-4 sm:px-6 py-16 sm:py-24 md:py-32 overflow-hidden"
-        style={{ contentVisibility: "auto", containIntrinsicSize: "600px" }}
+        className="relative border-t border-neutral-900 px-4 sm:px-6 py-20 sm:py-24 md:py-32 overflow-hidden"
+        style={{ contentVisibility: "auto", containIntrinsicSize: "700px" }}
       >
-        <div className="absolute inset-0 w-full h-full pointer-events-none opacity-50 hidden sm:block">
+        <div className="absolute inset-0 w-full h-full pointer-events-none opacity-60">
           {showSparkles && (
             <SparklesCore
               id="cta-sparkles"
               background="transparent"
               minSize={0.3}
               maxSize={1}
-              particleDensity={60}
+              particleDensity={narrow ? 30 : 60}
               className="w-full h-full"
               particleColor="#818cf8"
             />
@@ -482,26 +552,37 @@ export default function Home() {
               colors={["#6366f1", "#a855f7", "#ec4899", "#818cf8", "#6366f1"]}
               textColor="#ffffff"
               duration={1.8}
-              className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center"
+              className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-center leading-[1.05]"
             />
           </div>
 
-          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-neutral-400 max-w-lg mx-auto px-2">
+          <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-lg mx-auto px-2">
             Create your account in seconds. No credit card, no setup — just start sharing.
           </p>
-          <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
-            <a href="/register" className="w-full sm:w-auto rounded-full bg-white px-6 sm:px-8 py-3.5 text-sm font-semibold text-black transition hover:scale-105 hover:bg-neutral-200 text-center">
+
+          <div className="mt-9 sm:mt-10 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
+            <a
+              href="/register"
+              className="inline-flex items-center justify-center w-full sm:w-auto min-h-[48px] rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-black transition hover:bg-neutral-200 active:scale-[0.98]"
+            >
               Get started free
             </a>
-            <a href="/login" className="w-full sm:w-auto rounded-full border border-neutral-700 bg-neutral-900/50 px-6 sm:px-8 py-3.5 text-sm font-semibold text-white transition hover:scale-105 hover:border-neutral-500 hover:bg-neutral-800 text-center">
+            <a
+              href="/login"
+              className="inline-flex items-center justify-center w-full sm:w-auto min-h-[48px] rounded-full border border-neutral-700 bg-neutral-900/50 px-7 py-3.5 text-sm font-semibold text-white transition hover:border-neutral-500 hover:bg-neutral-800 active:scale-[0.98]"
+            >
               Sign in
             </a>
           </div>
+
+          <p className="mt-5 text-[11px] text-neutral-500">
+            Free forever · No credit card · Cancel anytime
+          </p>
         </div>
       </section>
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t border-neutral-900 px-4 sm:px-6 py-10 sm:py-12">
+      <footer className="border-t border-neutral-900 px-4 sm:px-6 py-10 sm:py-12 pb-14 md:pb-12">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -513,11 +594,18 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* CSS-only keyframes — run on the compositor thread, zero main-thread cost */}
+      <div
+        aria-hidden
+        className="h-[env(safe-area-inset-bottom)] md:hidden"
+      />
+
       <style jsx>{`
         @keyframes hero-in {
           from { opacity: 0.999; transform: translateY(8px); }
           to   { opacity: 1;     transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
         }
       `}</style>
     </main>

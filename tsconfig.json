@@ -33,6 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
+    "types/**/*.d.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "models/Message.tsnpm install socket.io socket.io-client"

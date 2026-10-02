@@ -1,4 +1,5 @@
 "use client";
+
 import React, {
   useRef,
   useMemo,
@@ -84,7 +85,7 @@ function latLngToVector3(
 }
 
 // ============================================================================
-// Marker Component — no <Html>, uses 3D sphere pin
+// Marker Component
 // ============================================================================
 
 interface MarkerProps {
@@ -118,7 +119,6 @@ function Marker({
 
   const lineHeight = topPosition.distanceTo(surfacePosition);
 
-  // Check if marker faces the camera
   useFrame(() => {
     if (!imageGroupRef.current) return;
 
@@ -148,22 +148,15 @@ function Marker({
 
   const { lineCenter, lineQuaternion } = useMemo(() => {
     const center = surfacePosition.clone().lerp(topPosition, 0.5);
-    const direction = topPosition
-      .clone()
-      .sub(surfacePosition)
-      .normalize();
+    const direction = topPosition.clone().sub(surfacePosition).normalize();
     const quaternion = new THREE.Quaternion();
-    quaternion.setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      direction
-    );
+    quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
 
     return { lineCenter: center, lineQuaternion: quaternion };
   }, [surfacePosition, topPosition]);
 
   return (
     <group ref={groupRef} visible={isVisible}>
-      {/* Pin line */}
       <mesh position={lineCenter} quaternion={lineQuaternion}>
         <cylinderGeometry args={[0.003, 0.003, lineHeight, 8]} />
         <meshBasicMaterial
@@ -173,23 +166,14 @@ function Marker({
         />
       </mesh>
 
-      {/* Pin point at the surface */}
       <mesh position={surfacePosition} quaternion={lineQuaternion}>
         <coneGeometry args={[0.015, 0.04, 8]} />
         <meshBasicMaterial color={hovered ? "#f97316" : "#ef4444"} />
       </mesh>
 
-      {/* Top sphere pin — replaces the HTML tooltip */}
       <group ref={imageGroupRef} position={topPosition}>
-        {/* Outer halo ring */}
         <mesh rotation={[0, 0, 0]}>
-          <ringGeometry
-            args={
-              hovered
-                ? [0.04, 0.055, 32]
-                : [0.035, 0.045, 32]
-            }
-          />
+          <ringGeometry args={hovered ? [0.04, 0.055, 32] : [0.035, 0.045, 32]} />
           <meshBasicMaterial
             color={hovered ? "#a855f7" : "#6366f1"}
             transparent
@@ -198,24 +182,13 @@ function Marker({
           />
         </mesh>
 
-        {/* Inner glowing dot */}
         <mesh
           onPointerOver={handlePointerEnter}
           onPointerOut={handlePointerLeave}
           onClick={handleClick}
         >
-          <sphereGeometry
-            args={[
-              hovered
-                ? defaultSize * 1.4
-                : defaultSize,
-              16,
-              16,
-            ]}
-          />
-          <meshBasicMaterial
-            color={hovered ? "#ffffff" : "#a855f7"}
-          />
+          <sphereGeometry args={[hovered ? defaultSize * 1.4 : defaultSize, 16, 16]} />
+          <meshBasicMaterial color={hovered ? "#ffffff" : "#a855f7"} />
         </mesh>
       </group>
     </group>
@@ -323,25 +296,25 @@ function Atmosphere({ radius, color, intensity, blur }: AtmosphereProps) {
         fresnelPower: { value: fresnelPower },
       },
       vertexShader: `
-                varying vec3 vNormal;
-                varying vec3 vPosition;
-                void main() {
-                    vNormal = normalize(normalMatrix * normal);
-                    vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
       fragmentShader: `
-                uniform vec3 atmosphereColor;
-                uniform float intensity;
-                uniform float fresnelPower;
-                varying vec3 vNormal;
-                varying vec3 vPosition;
-                void main() {
-                    float fresnel = pow(1.0 - abs(dot(vNormal, normalize(-vPosition))), fresnelPower);
-                    gl_FragColor = vec4(atmosphereColor, fresnel * intensity);
-                }
-            `,
+        uniform vec3 atmosphereColor;
+        uniform float intensity;
+        uniform float fresnelPower;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main() {
+          float fresnel = pow(1.0 - abs(dot(vNormal, normalize(-vPosition))), fresnelPower);
+          gl_FragColor = vec4(atmosphereColor, fresnel * intensity);
+        }
+      `,
       side: THREE.BackSide,
       transparent: true,
       depthWrite: false,
@@ -376,28 +349,23 @@ function Scene({
   const { camera } = useThree();
 
   React.useEffect(() => {
-    camera.position.set(0, 0, config.radius * 3.5);
+    // Push the camera back a bit further so the sphere is fully framed
+    // even on narrow aspect ratios (phones in portrait).
+    camera.position.set(0, 0, config.radius * 4.2);
     camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
   }, [camera, config.radius]);
 
   return (
     <>
       <ambientLight intensity={config.ambientIntensity} />
       <directionalLight
-        position={[
-          config.radius * 5,
-          config.radius * 2,
-          config.radius * 5,
-        ]}
+        position={[config.radius * 5, config.radius * 2, config.radius * 5]}
         intensity={config.pointLightIntensity}
         color="#ffffff"
       />
       <directionalLight
-        position={[
-          -config.radius * 3,
-          config.radius,
-          -config.radius * 2,
-        ]}
+        position={[-config.radius * 3, config.radius, -config.radius * 2]}
         intensity={config.pointLightIntensity * 0.3}
         color="#88ccff"
       />
@@ -435,7 +403,7 @@ function Scene({
 }
 
 // ============================================================================
-// Loading Fallback — no <Html>, just a spinning 3D sphere
+// Loading Fallback
 // ============================================================================
 
 function LoadingFallback() {
@@ -501,7 +469,7 @@ export function Globe3D({
   );
 
   return (
-    <div className={cn("relative h-[500px] w-full", className)}>
+    <div className={cn("relative h-full w-full", className)}>
       <Canvas
         gl={{
           antialias: true,
@@ -513,11 +481,12 @@ export function Globe3D({
           fov: 45,
           near: 0.1,
           far: 1000,
-          position: [0, 0, mergedConfig.radius * 3.5],
+          position: [0, 0, mergedConfig.radius * 4.2],
         }}
         style={{
-          background:
-            mergedConfig.backgroundColor || "transparent",
+          width: "100%",
+          height: "100%",
+          background: mergedConfig.backgroundColor || "transparent",
         }}
       >
         <Suspense fallback={<LoadingFallback />}>
