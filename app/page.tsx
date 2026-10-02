@@ -8,7 +8,6 @@ import ErrorBoundary from "./ErrorBoundary";
 import { AnimatedTestimonials } from "@/components/ui/animated-testimonials";
 import Carousel from "@/components/ui/carousel";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
-import { BlackHoleHeroSection } from "@/components/ui/blackhole-hero-section";
 
 /* ==========================================================================
    Below-the-fold components — lazy-loaded so they don't block first paint.
@@ -67,24 +66,6 @@ function useNarrow(query = "(max-width: 767px)") {
   return narrow;
 }
 
-/** Defers a boolean flip until after first paint, then idle time. */
-function useDeferredMount(delayMs = 200) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    const go = () => { if (!cancelled) setReady(true); };
-    const raf = requestAnimationFrame(() => {
-      if ("requestIdleCallback" in window) {
-        (window as any).requestIdleCallback(go, { timeout: 500 });
-      } else {
-        setTimeout(go, delayMs);
-      }
-    });
-    return () => { cancelled = true; cancelAnimationFrame(raf); };
-  }, [delayMs]);
-  return ready;
-}
-
 /** Fires once when the ref's element enters `rootMargin` of the viewport. */
 function useInViewOnce<T extends HTMLElement>(rootMargin = "400px") {
   const ref = useRef<T | null>(null);
@@ -102,38 +83,12 @@ function useInViewOnce<T extends HTMLElement>(rootMargin = "400px") {
   return [ref, seen] as const;
 }
 
-/** True once the user has scrolled past ~1.2× the viewport height. */
-function useScrolledPastHero() {
-  const [past, setPast] = useState(false);
-  useEffect(() => {
-    let ticking = false;
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        setPast(window.scrollY > window.innerHeight * 1.2);
-        ticking = false;
-      });
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-  return past;
-}
-
 /* ==========================================================================
    Page
    ========================================================================== */
 
 export default function Home() {
   const narrow = useNarrow();
-
-  // Black hole: mounts AFTER first paint.
-  const showBlackHole = useDeferredMount(200);
-
-  // Pause the black hole once the user scrolls past the hero.
-  const scrolledPastHero = useScrolledPastHero();
 
   // Below-the-fold heavy components — mounted only when near viewport.
   const [globeRef, showGlobe] = useInViewOnce<HTMLDivElement>("400px");
@@ -143,39 +98,51 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white selection:bg-indigo-500/30 overflow-x-hidden">
-      {/* ================= HERO — BLACK HOLE BACKGROUND ================= */}
+      {/* ================= HERO — STATIC GRADIENT + AURORA ================= */}
       <section className="relative min-h-screen w-full overflow-hidden bg-black">
-        {/* Static gradient underlay — paints at frame 1, no JS needed */}
+        {/* Deep radial base — instant paint, no JS */}
         <div
           aria-hidden
           className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a0a2e_0%,_#000_70%)]"
         />
 
-        {/* Black hole layer — fades in once mounted, pauses when scrolled past */}
-        {showBlackHole && (
-          <div
-            className="absolute inset-0"
-            style={{ animation: "bh-fade-in 700ms ease-out both" }}
-          >
-            <BlackHoleHeroSection
-              focus={narrow ? [0.5, 0.78] : [0.78, 0.5]}
-              scrim={narrow ? "top" : "left"}
-              scrimStrength={0.92}
-              distance={24}
-              elevation={narrow ? -7 : -5.5}
-              fov={narrow ? 58 : 42}
-              glow={narrow ? 0.7 : 0.9}
-              /* Lower cost on every device — still physically accurate */
-              steps={narrow ? 90 : 150}
-              resolution={narrow ? 0.35 : 0.5}
-              maxDpr={1}
-              spinSpeed={0.06}
-              doppler={0.35}
-              brightness={1}
-              paused={scrolledPastHero}   /* freezes rAF when out of view */
-            />
-          </div>
-        )}
+        {/* Aurora glow — layered radial gradients, pure CSS */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-70"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 40% at 20% 30%, rgba(99,102,241,0.25) 0%, transparent 60%)," +
+              "radial-gradient(ellipse 50% 35% at 80% 70%, rgba(168,85,247,0.22) 0%, transparent 60%)," +
+              "radial-gradient(ellipse 40% 30% at 50% 90%, rgba(236,72,153,0.18) 0%, transparent 60%)",
+          }}
+        />
+
+        {/* Fine grain — breaks up the gradient banding */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+          }}
+        />
+
+        {/* Subtle grid lines for a "space" feel */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px)," +
+              "linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
+            backgroundSize: "80px 80px",
+            maskImage:
+              "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+          }}
+        />
 
         {/* Hero copy — pure CSS animation (main-thread free) */}
         <div className="relative z-10 mx-auto flex h-full min-h-screen w-full max-w-7xl flex-col justify-start px-4 pt-24 sm:px-6 md:justify-center md:pt-0 lg:px-8">
@@ -548,10 +515,6 @@ export default function Home() {
 
       {/* CSS-only keyframes — run on the compositor thread, zero main-thread cost */}
       <style jsx>{`
-        @keyframes bh-fade-in {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
         @keyframes hero-in {
           from { opacity: 0.999; transform: translateY(8px); }
           to   { opacity: 1;     transform: translateY(0); }
