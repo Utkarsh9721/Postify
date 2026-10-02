@@ -37,7 +37,7 @@ export interface BlackHoleHeroSectionProps
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Shaders — unchanged from the original. This is the physics.               */
+/*  Shaders — untouched. This is the physics.                                  */
 /* -------------------------------------------------------------------------- */
 
 const VERT = `
@@ -409,9 +409,9 @@ export function BlackHoleHeroSection({
     glow = 1,
     exposure = 0.9,
     vignette = 0.28,
-    steps = 180,          // was 300 — 40% cheaper, visually near-identical
-    resolution = 0.6,     // was 0.7 — the internal render scale
-    maxDpr = 1,           // was 1.75 — cap at 1× on all devices
+    steps = 180,
+    resolution = 0.6,
+    maxDpr = 1,
     focus = [0.72, 0.46],
     scrim = "none",
     scrimStrength = 0.9,
@@ -422,19 +422,83 @@ export function BlackHoleHeroSection({
 }: BlackHoleHeroSectionProps) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [isSmall, setIsSmall] = React.useState(false);
 
-    const props = useRef({
-        distance, elevation, azimuth, orbitSpeed, roll, fov, diskInner, diskOuter,
-        diskThickness, diskDensity, brightness, spinSpeed, grain, doppler, hotColor,
-        midColor, coolColor, starBrightness, glow, exposure, vignette, steps,
-        resolution, maxDpr, focus, scrim, scrimStrength, paused,
-    });
-    props.current = {
-        distance, elevation, azimuth, orbitSpeed, roll, fov, diskInner, diskOuter,
-        diskThickness, diskDensity, brightness, spinSpeed, grain, doppler, hotColor,
-        midColor, coolColor, starBrightness, glow, exposure, vignette, steps,
-        resolution, maxDpr, focus, scrim, scrimStrength, paused,
-    };
+    // Detect small screen for auto-tuning. This runs once on mount and
+    // re-runs on orientation change — cheap and keeps the render sharp.
+    React.useEffect(() => {
+        const mq = window.matchMedia("(max-width: 767px)");
+        const sync = () => setIsSmall(mq.matches);
+        sync();
+        mq.addEventListener("change", sync);
+        return () => mq.removeEventListener("change", sync);
+    }, []);
+
+    // Auto-tuned props: if the caller didn't override, we pick good defaults
+    // for phones. The `?? undefined` pattern lets a caller still override.
+    const tuned = React.useMemo(() => {
+        if (!isSmall) {
+            return {
+                distance, elevation, azimuth, orbitSpeed, roll, fov,
+                diskInner, diskOuter, diskThickness, diskDensity, brightness,
+                spinSpeed, grain, doppler, hotColor, midColor, coolColor,
+                starBrightness, glow, exposure, vignette, steps, resolution,
+                maxDpr, focus, scrim, scrimStrength, paused,
+            };
+        }
+        // Phone tuning — everything critical to make the hole read at small size
+        return {
+            distance: distance,
+            // Lower camera a touch so the disc is edge-on and the halo arc shows
+            elevation: elevation,
+            azimuth,
+            orbitSpeed,
+            // Roll keeps the diagonal — reads better on portrait
+            roll,
+            // Wider FOV so the halo doesn't get cropped by the narrow frame
+            fov: Math.min(70, fov + 14),
+            diskInner,
+            // Push the outer edge out so the ring structure reads at small scale
+            diskOuter: diskOuter * 1.15,
+            diskThickness: diskThickness * 1.05,
+            diskDensity: diskDensity,
+            // Slightly brighter — the smaller render loses a bit to upscaling
+            brightness: brightness * 1.08,
+            spinSpeed,
+            grain,
+            doppler,
+            hotColor,
+            midColor,
+            coolColor,
+            starBrightness,
+            // More bloom compensates for the smaller internal resolution
+            glow: Math.min(1.6, glow * 1.25),
+            exposure,
+            // Softer vignette so corners don't swallow the disc
+            vignette: Math.max(0.1, vignette * 0.7),
+            // Fewer steps on phones — the arc still reads at ~130
+            steps: Math.min(steps, 130),
+            // Lower internal resolution for phone GPUs
+            resolution: Math.min(resolution, 0.45),
+            // Never render at >1 DPR on phones — saves the battery
+            maxDpr: 1,
+            // Move the hole down + center so the disc stays whole in the bottom third
+            focus: [0.5, 0.76] as [number, number],
+            // Scrim from the top so text at top stays readable
+            scrim: "top" as const,
+            scrimStrength: Math.max(scrimStrength, 0.92),
+            paused,
+        };
+    }, [
+        isSmall, distance, elevation, azimuth, orbitSpeed, roll, fov,
+        diskInner, diskOuter, diskThickness, diskDensity, brightness,
+        spinSpeed, grain, doppler, hotColor, midColor, coolColor,
+        starBrightness, glow, exposure, vignette, steps, resolution,
+        maxDpr, focus, scrim, scrimStrength, paused,
+    ]);
+
+    const props = useRef(tuned);
+    props.current = tuned;
 
     useEffect(() => {
         const host = hostRef.current;
@@ -452,7 +516,7 @@ export function BlackHoleHeroSection({
             stencil: false,
             powerPreference: "high-performance",
             preserveDrawingBuffer: false,
-            desynchronized: true,     // ← lets the browser composite off the main thread
+            desynchronized: true,
         };
         const gl = (canvas.getContext("webgl2", opts) ||
             canvas.getContext("webgl", opts)) as
@@ -805,33 +869,26 @@ export function BlackHoleHeroSection({
             for (let i = 0; i < passes; i++) render(clock);
         }
 
-        /* --- loop ------------------------------------------------------------- */
-
-        // Track recent frame times for adaptive quality
         let avgFrameMs = 16;
 
         function tick(now: number) {
             if (!running) return;
             raf = requestAnimationFrame(tick);
-
-            // Skip work when hidden — save the frame entirely
             if (!visible) { lastFrame = now; return; }
 
             const rawDt = lastFrame ? (now - lastFrame) / 1000 : 0;
             const dt = Math.min(0.05, rawDt);
             lastFrame = now;
 
-            // Exponential moving average of frame time
             const frameMs = rawDt * 1000;
             if (frameMs > 0 && frameMs < 100) {
                 avgFrameMs = avgFrameMs * 0.9 + frameMs * 0.1;
             }
 
-            // If we're pushing past 22ms/frame (~45fps), skip this frame entirely.
-            // This trades animation smoothness for keeping the main thread free
-            // for the user's interactions. The visual is a slightly lower FPS
-            // black hole, but the page stays responsive.
-            if (avgFrameMs > 22 && !props.current.paused) {
+            // Looser threshold on small screens — drop to a lower FPS rather than
+            // block the main thread for interactions.
+            const skipThreshold = isSmall ? 30 : 22;
+            if (avgFrameMs > skipThreshold && !props.current.paused) {
                 return;
             }
 
@@ -847,9 +904,6 @@ export function BlackHoleHeroSection({
         settle(reduced ? 16 : 1);
         if (!reduced) raf = requestAnimationFrame(tick);
 
-        /* --- the world ------------------------------------------------------- */
-
-        // Debounced resize — prevents target thrashing during window drag.
         const ro = new ResizeObserver(() => {
             if (resizeTimer) clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
@@ -888,7 +942,16 @@ export function BlackHoleHeroSection({
             if (!reduced) raf = requestAnimationFrame(tick);
         };
 
+        // Orientation change → force a resize (matchMedia fires the state change
+        // but ResizeObserver may be debounced past the visual change)
+        const onOrientation = () => {
+            width = height = sceneW = sceneH = 0;
+            resize();
+            settle(reduced ? 16 : 1);
+        };
+
         document.addEventListener("visibilitychange", onVisibility);
+        window.addEventListener("orientationchange", onOrientation);
         canvas.addEventListener("webglcontextlost", onLost);
         canvas.addEventListener("webglcontextrestored", onRestored);
 
@@ -899,6 +962,7 @@ export function BlackHoleHeroSection({
             ro.disconnect();
             io.disconnect();
             document.removeEventListener("visibilitychange", onVisibility);
+            window.removeEventListener("orientationchange", onOrientation);
             canvas.removeEventListener("webglcontextlost", onLost);
             canvas.removeEventListener("webglcontextrestored", onRestored);
             dropTargets();
@@ -907,6 +971,7 @@ export function BlackHoleHeroSection({
                 if (p) gl.deleteProgram(p.program);
             }
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
