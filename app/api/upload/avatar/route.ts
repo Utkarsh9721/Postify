@@ -5,12 +5,8 @@ import { getCurrentUser } from "@/lib/auth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 3 * 1024 * 1024; // 3 MB
-const ALLOWED = new Set([
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-]);
+const MAX_BYTES = 3 * 1024 * 1024;
+const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME!;
 const UPLOAD_PRESET = "ya6x1upb";
@@ -49,7 +45,6 @@ export async function POST(req: Request) {
             );
         }
 
-        // Reject empty files before we waste a network round trip
         if (file.size === 0) {
             return NextResponse.json(
                 { message: "File is empty" },
@@ -61,19 +56,13 @@ export async function POST(req: Request) {
         cloudForm.append("file", file);
         cloudForm.append("upload_preset", UPLOAD_PRESET);
         cloudForm.append("folder", "socially/avatars");
-
-        // Add a transformation to reduce the upload size and normalize output
-        cloudForm.append(
-            "transformation",
-            "c_fill,g_face,w_400,h_400,q_auto:good,f_auto"
-        );
+        // ✅ transformation removed — it's now configured inside the upload preset
 
         const cloudRes = await fetch(
             `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
             {
                 method: "POST",
                 body: cloudForm,
-                // Fail fast if Cloudinary hangs
                 signal: AbortSignal.timeout(15000),
             }
         );
@@ -99,7 +88,6 @@ export async function POST(req: Request) {
             publicId: cloudData.public_id,
         });
     } catch (err: any) {
-        // Timeout has a specific name
         if (err?.name === "TimeoutError") {
             return NextResponse.json(
                 { message: "Upload timed out. Try again." },
