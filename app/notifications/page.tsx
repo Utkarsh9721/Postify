@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import jwt from "jsonwebtoken";
 import { Types } from "mongoose";
+import { unstable_cache } from "next/cache";
 
 import connectDB from "@/lib/mongo";
 import { User, Notification } from "@/lib/models";
@@ -10,6 +11,43 @@ import NotificationsClient from "./NotificationsClient";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/* ============================================================
+   Cached queries — reduce TTFB by skipping DB hits on repeat loads
+   ============================================================ */
+
+const getUserById = unstable_cache(
+    async (id: string) =>
+        User.findById(id).select("name email").lean(),
+    ["user-by-id"],
+    { revalidate: 60, tags: ["user"] }
+);
+
+const getUserByEmail = unstable_cache(
+    async (email: string) =>
+        User.findOne({ email }).select("name email").lean(),
+    ["user-by-email"],
+    { revalidate: 60, tags: ["user"] }
+);
+
+const getNotifications = unstable_cache(
+    async (userIdStr: string) => {
+        const userObjectId = new Types.ObjectId(userIdStr);
+        return Notification.find({ recipient: userObjectId })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .select("type read createdAt actor post")
+            .populate("actor", "name avatar")
+            .populate("post", "content")
+            .lean();
+    },
+    ["notifications-by-user"],
+    { revalidate: 30, tags: ["notifications"] }
+);
+
+/* ============================================================
+   Page
+   ============================================================ */
 
 export default async function NotificationsPage() {
     const cookieStore = await cookies();
@@ -26,32 +64,23 @@ export default async function NotificationsPage() {
 
     await connectDB();
 
-    const currentUserFilter = payload.id
-        ? { _id: payload.id }
-        : payload.userId
-            ? { _id: payload.userId }
-            : { email: payload.email };
+    /* --- Resolve current user (cached) --- */
+    let currentUser: any = null;
 
-    // Only fields used downstream
-    const currentUser = await User.findOne(currentUserFilter)
-        .select("name email")
-        .lean();
+    if (payload.id) {
+        currentUser = await getUserById(String(payload.id));
+    } else if (payload.userId) {
+        currentUser = await getUserById(String(payload.userId));
+    } else if (payload.email) {
+        currentUser = await getUserByEmail(String(payload.email));
+    }
 
     if (!currentUser) redirect("/login");
 
-    const userObjectId = new Types.ObjectId(currentUser._id);
-
-    const notifications = await Notification.find({
-        recipient: userObjectId,
-    })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .select("type read createdAt actor post")
-        .populate("actor", "name avatar")
-        .populate("post", "content")
-        .lean();
-
     const userId = currentUser._id.toString();
+
+    /* --- Fetch notifications (cached) --- */
+    const notifications = await getNotifications(userId);
 
     const initialNotifications = notifications.map((n: any) => ({
         id: n._id.toString(),
@@ -73,9 +102,7 @@ export default async function NotificationsPage() {
 
     return (
         <NotificationsClient
-            initialNotifications={JSON.parse(
-                JSON.stringify(initialNotifications)
-            )}
+            initialNotifications={JSON.parse(JSON.stringify(initialNotifications))}
         />
     );
 }

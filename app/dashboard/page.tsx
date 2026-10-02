@@ -11,6 +11,9 @@ import PostComposer from "./PostComposer";
 import PostCard from "./PostCard";
 import SidebarLinks from "./SidebarLinks";
 import MobileNav from "./MobileNav";
+import StatsStrip from "./StatsStrip";
+import ActivityItem from "./ActivityItem";
+import FriendsCard, { type Person } from "./FriendsCard";
 import { User, Post, Chat, Notification } from "@/lib/models";
 
 export const runtime = "nodejs";
@@ -48,7 +51,7 @@ export default async function Dashboard() {
     const userId = currentUser._id;
 
     /* ---------------- DATA ---------------- */
-    const [posts, notifications, chats] = await Promise.all([
+    const [posts, notifications, suggestedUsers] = await Promise.all([
         Post.find()
             .sort({ createdAt: -1 })
             .limit(20)
@@ -61,14 +64,11 @@ export default async function Dashboard() {
             .populate("actor", "name email avatar")
             .lean(),
 
-        Chat.find({ participants: userId })
-            .sort({ updatedAt: -1 })
-            .limit(10)
-            .populate("participants", "name email avatar")
-            .populate({
-                path: "lastMessage",
-                populate: { path: "sender", select: "name email avatar" },
-            })
+        User.find({
+            _id: { $ne: userId, $nin: currentUser.following ?? [] },
+        })
+            .select("name email avatar bio followers")
+            .limit(5)
             .lean(),
     ]);
 
@@ -92,6 +92,7 @@ export default async function Dashboard() {
 
     const mappedNotifications = notifications.map((n: any) => ({
         id: n._id.toString(),
+        type: n.type ?? "default",
         initial: (n.actor?.name?.[0] ?? "U").toUpperCase(),
         avatar: n.actor?.avatar ?? "",
         name: n.actor?.name ?? "Someone",
@@ -100,26 +101,15 @@ export default async function Dashboard() {
         color: pickColor(n.actor?.name ?? "U"),
     }));
 
-    const mappedMessages = chats.map((c: any) => {
-        const other = c.participants.find(
-            (p: any) => p._id.toString() !== userId.toString()
-        );
-        const last = c.lastMessage;
-        const isMine = last?.sender?._id?.toString() === userId.toString();
-
-        return {
-            id: c._id.toString(),
-            initial: (other?.name?.[0] ?? "U").toUpperCase(),
-            avatar: other?.avatar ?? "",
-            name: other?.name ?? "Unknown",
-            preview: last
-                ? `${isMine ? "You: " : ""}${truncate(last.content, 40)}`
-                : "No messages yet",
-            time: last ? timeAgo(last.createdAt) : "",
-            online: false,
-            color: pickColor(other?.name ?? "U"),
-        };
-    });
+    const mappedSuggested: Person[] = suggestedUsers.map((u: any) => ({
+        id: u._id.toString(),
+        name: u.name ?? "Unknown",
+        email: u.email ?? "",
+        avatar: u.avatar ?? "",
+        bio: u.bio ?? "",
+        followersCount: u.followers?.length ?? 0,
+        isFollowing: false,
+    }));
 
     /* ---------------- UI ---------------- */
     const userInitial = (currentUser.name?.[0] ?? "U").toUpperCase();
@@ -134,6 +124,8 @@ export default async function Dashboard() {
     ).length;
 
     const currentUserId = currentUser._id.toString();
+    const followersCount = currentUser.followers?.length ?? 0;
+    const followingCount = currentUser.following?.length ?? 0;
 
     return (
         <div className="relative min-h-screen bg-slate-50 pb-28 lg:pb-0">
@@ -352,7 +344,7 @@ export default async function Dashboard() {
                                         className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors"
                                     >
                                         <p className="text-base sm:text-lg font-bold text-indigo-600">
-                                            {formatCount(currentUser.followers?.length ?? 0)}
+                                            {formatCount(followersCount)}
                                         </p>
                                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium">
                                             Followers
@@ -363,7 +355,7 @@ export default async function Dashboard() {
                                         className="text-center py-1.5 rounded-xl hover:bg-indigo-50 transition-colors"
                                     >
                                         <p className="text-base sm:text-lg font-bold text-indigo-600">
-                                            {formatCount(currentUser.following?.length ?? 0)}
+                                            {formatCount(followingCount)}
                                         </p>
                                         <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-medium">
                                             Following
@@ -390,6 +382,13 @@ export default async function Dashboard() {
 
                     {/* ---------------- CENTER: FEED ---------------- */}
                     <section className="lg:col-span-6 space-y-3 sm:space-y-4 order-1 lg:order-2">
+                        <StatsStrip
+                            posts={myPostCount}
+                            followers={followersCount}
+                            following={followingCount}
+                            notifications={unreadNotifications}
+                        />
+
                         <PostComposer userInitial={userInitial} userAvatar={userAvatar} />
 
                         {mappedPosts.length === 0 ? (
@@ -398,7 +397,9 @@ export default async function Dashboard() {
                                 message="When you or people you follow post something, it will appear here."
                             />
                         ) : (
-                            mappedPosts.map((post) => <PostCard key={post.id} {...post} />)
+                            mappedPosts.map((post, i) => (
+                                <PostCard key={post.id} {...post} priority={i === 0} />
+                            ))
                         )}
                     </section>
 
@@ -422,7 +423,7 @@ export default async function Dashboard() {
                             ) : (
                                 <div className="space-y-3 sm:space-y-4">
                                     {mappedNotifications.map((n) => (
-                                        <NotificationItem key={n.id} {...n} />
+                                        <ActivityItem key={n.id} {...n} />
                                     ))}
                                 </div>
                             )}
@@ -434,35 +435,9 @@ export default async function Dashboard() {
                             </Link>
                         </div>
 
-                        <div className="rounded-3xl bg-white/90 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 p-4 sm:p-5 backdrop-blur-xl">
-                            <div className="flex items-center justify-between mb-3 sm:mb-4">
-                                <h3 className="text-sm sm:text-base font-bold text-gray-900">
-                                    Messages
-                                </h3>
-                                {unreadMessages > 0 && (
-                                    <span className="text-[10px] sm:text-xs font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-500 px-2.5 py-0.5 rounded-full shadow-sm">
-                                        {unreadMessages} new
-                                    </span>
-                                )}
-                            </div>
-                            {mappedMessages.length === 0 ? (
-                                <div className="py-6 text-center">
-                                    <p className="text-xs text-gray-400">No messages yet</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2 sm:space-y-3">
-                                    {mappedMessages.map((m) => (
-                                        <MessageItem key={m.id} {...m} />
-                                    ))}
-                                </div>
-                            )}
-                            <Link
-                                href="/messages"
-                                className="block text-center w-full mt-3 sm:mt-4 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors py-2 rounded-xl hover:bg-indigo-50"
-                            >
-                                View all
-                            </Link>
-                        </div>
+                        {mappedSuggested.length > 0 && (
+                            <FriendsCard users={mappedSuggested} />
+                        )}
                     </aside>
                 </div>
             </main>
@@ -490,10 +465,6 @@ function timeAgo(date: Date | string): string {
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
     return d.toLocaleDateString();
-}
-
-function truncate(str: string, len: number) {
-    return str.length > len ? str.slice(0, len) + "…" : str;
 }
 
 function formatCount(n: number): string {
@@ -534,128 +505,35 @@ function pickColor(seed: string): string {
 }
 
 /* ================================================================
-   UI COMPONENTS
+   EMPTY STATE
    ================================================================ */
 
 function EmptyState({ title, message }: { title: string; message: string }) {
     return (
-        <div className="relative rounded-3xl bg-white/90 border border-gray-100 shadow-sm p-8 sm:p-10 text-center backdrop-blur-xl">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-3 ring-1 ring-indigo-200/40">
-                <svg
-                    className="w-8 h-8 text-indigo-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                    />
-                </svg>
-            </div>
-            <p className="text-sm font-semibold text-gray-800">{title}</p>
-            <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">{message}</p>
-        </div>
-    );
-}
+        <div className="relative rounded-3xl bg-white/90 border border-gray-100 shadow-sm p-10 sm:p-12 text-center backdrop-blur-xl overflow-hidden">
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full bg-gradient-to-br from-indigo-300/40 to-purple-300/40 blur-3xl pointer-events-none" />
 
-function NotificationItem({
-    initial,
-    avatar,
-    name,
-    action,
-    time,
-    color,
-}: {
-    initial: string;
-    avatar: string;
-    name: string;
-    action: string;
-    time: string;
-    color: string;
-}) {
-    return (
-        <Link
-            href="/notifications"
-            className="group flex items-start gap-3 p-2 -mx-2 rounded-2xl hover:bg-indigo-50/60 transition-colors"
-        >
-            <div className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-white shadow-sm">
-                {avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatar} alt={name} className="w-full h-full object-cover" />
-                ) : (
-                    <div
-                        className={`w-full h-full bg-gradient-to-br ${color} flex items-center justify-center`}
+            <div className="relative">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                    <svg
+                        className="w-9 h-9 text-indigo-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                        <span className="text-xs font-bold text-white">{initial}</span>
-                    </div>
-                )}
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm text-gray-700 leading-snug">
-                    <span className="font-semibold text-gray-900">{name}</span>{" "}
-                    <span className="text-gray-600">{action}</span>
-                </p>
-                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{time}</p>
-            </div>
-        </Link>
-    );
-}
-
-function MessageItem({
-    initial,
-    avatar,
-    name,
-    preview,
-    time,
-    online,
-    color,
-}: {
-    initial: string;
-    avatar: string;
-    name: string;
-    preview: string;
-    time: string;
-    online?: boolean;
-    color: string;
-}) {
-    return (
-        <Link
-            href="/messages"
-            className="group flex items-center gap-3 p-2 -mx-2 rounded-2xl hover:bg-indigo-50/60 transition-colors"
-        >
-            <div className="relative flex-shrink-0">
-                <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm">
-                    {avatar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={avatar} alt={name} className="w-full h-full object-cover" />
-                    ) : (
-                        <div
-                            className={`w-full h-full bg-gradient-to-br ${color} flex items-center justify-center`}
-                        >
-                            <span className="text-xs font-bold text-white">{initial}</span>
-                        </div>
-                    )}
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                        />
+                    </svg>
                 </div>
-                {online && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
-                )}
-            </div>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
-                        {name}
-                    </p>
-                    <span className="text-[10px] sm:text-xs text-gray-400 flex-shrink-0">
-                        {time}
-                    </span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5">
-                    {preview}
+                <p className="text-base font-semibold text-gray-900">{title}</p>
+                <p className="text-sm text-gray-500 mt-2 max-w-xs mx-auto leading-relaxed">
+                    {message}
                 </p>
             </div>
-        </Link>
+        </div>
     );
 }

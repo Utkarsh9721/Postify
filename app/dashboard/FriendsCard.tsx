@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 
-type Person = {
+export type Person = {
     id: string;
     name: string;
     email: string;
@@ -184,8 +184,8 @@ export default function FriendsCard({ users }: { users: Person[] }) {
                                             onClick={() => toggleFollow(u.id)}
                                             disabled={busyId === u.id}
                                             className={`px-3 py-1 rounded-full text-[10px] sm:text-xs font-semibold transition-colors disabled:opacity-60 ${u.isFollowing
-                                                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
-                                                    : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-200/60 hover:from-indigo-700 hover:to-purple-700"
+                                                ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+                                                : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-200/60 hover:from-indigo-700 hover:to-purple-700"
                                                 }`}
                                         >
                                             {busyId === u.id

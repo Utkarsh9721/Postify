@@ -205,10 +205,10 @@ export default function ProfileClient({
                                         {relationship && (
                                             <span
                                                 className={`text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 rounded-full border ${relationship === "Friends"
-                                                        ? "text-green-600 bg-green-50 border-green-100"
-                                                        : relationship === "Follows you"
-                                                            ? "text-indigo-600 bg-indigo-50 border-indigo-100"
-                                                            : "text-gray-600 bg-gray-100 border-gray-200"
+                                                    ? "text-green-600 bg-green-50 border-green-100"
+                                                    : relationship === "Follows you"
+                                                        ? "text-indigo-600 bg-indigo-50 border-indigo-100"
+                                                        : "text-gray-600 bg-gray-100 border-gray-200"
                                                     }`}
                                             >
                                                 {relationship}
@@ -227,8 +227,8 @@ export default function ProfileClient({
                                             onClick={toggleFollow}
                                             disabled={busy}
                                             className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-60 shadow-sm ${isFollowing
-                                                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
-                                                    : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
+                                                ? "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+                                                : "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
                                                 }`}
                                         >
                                             {busy
