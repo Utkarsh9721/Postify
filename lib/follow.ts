@@ -86,27 +86,33 @@ export async function toggleFollow(meId: string, targetId: string) {
 }
 
 /* ============================================================
-   ID-only queries — for filtering lists
+   ID-only queries — return Sets for O(1) membership checks
    ============================================================ */
 
 /**
  * Returns the IDs of users that `userId` is following.
+ * Returns a Set so callers can do `.has(id)` in O(1).
  */
-export async function getFollowingIds(userId: string): Promise<string[]> {
-    if (!Types.ObjectId.isValid(userId)) return [];
+export async function getFollowingIds(userId: string): Promise<Set<string>> {
+    if (!Types.ObjectId.isValid(userId)) return new Set();
     const user = await User.findById(userId).select("following").lean();
-    if (!user) return [];
-    return ((user as any).following ?? []).map((id: any) => id.toString());
+    if (!user) return new Set();
+    return new Set(
+        ((user as any).following ?? []).map((id: any) => id.toString())
+    );
 }
 
 /**
  * Returns the IDs of users who follow `userId`.
+ * Returns a Set so callers can do `.has(id)` in O(1).
  */
-export async function getFollowerIds(userId: string): Promise<string[]> {
-    if (!Types.ObjectId.isValid(userId)) return [];
+export async function getFollowerIds(userId: string): Promise<Set<string>> {
+    if (!Types.ObjectId.isValid(userId)) return new Set();
     const user = await User.findById(userId).select("followers").lean();
-    if (!user) return [];
-    return ((user as any).followers ?? []).map((id: any) => id.toString());
+    if (!user) return new Set();
+    return new Set(
+        ((user as any).followers ?? []).map((id: any) => id.toString())
+    );
 }
 
 /* ============================================================
@@ -119,10 +125,7 @@ export async function getFollowerIds(userId: string): Promise<string[]> {
 export async function getFollowingUsers(userId: string) {
     if (!Types.ObjectId.isValid(userId)) return [];
     const user = await User.findById(userId)
-        .populate(
-            "following",
-            "name email avatar bio followers following"
-        )
+        .populate("following", "name email avatar bio followers following")
         .lean();
     if (!user) return [];
     return (user as any).following ?? [];
@@ -134,10 +137,7 @@ export async function getFollowingUsers(userId: string) {
 export async function getFollowerUsers(userId: string) {
     if (!Types.ObjectId.isValid(userId)) return [];
     const user = await User.findById(userId)
-        .populate(
-            "followers",
-            "name email avatar bio followers following"
-        )
+        .populate("followers", "name email avatar bio followers following")
         .lean();
     if (!user) return [];
     return (user as any).followers ?? [];
