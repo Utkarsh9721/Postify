@@ -1,16 +1,18 @@
 // app/notifications/NotificationsClient.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePusherChannel } from "@/lib/usePusher";
 
 type NotificationType =
     | "like"
     | "comment"
     | "follow"
     | "mention"
-    | "message";
+    | "message"
+    | "call";
 
 type Notif = {
     id: string;
@@ -28,14 +30,36 @@ type Notif = {
 
 export default function NotificationsClient({
     initialNotifications,
+    currentUserId,
 }: {
     initialNotifications: Notif[];
+    currentUserId: string;
 }) {
     const router = useRouter();
     const [notifications, setNotifications] = useState(initialNotifications);
     const [tab, setTab] = useState<"all" | "unread">("all");
     const [busyId, setBusyId] = useState<string | null>(null);
     const [markingAll, setMarkingAll] = useState(false);
+
+    /* ─── Realtime: subscribe to private channel ─── */
+    const userChannel = usePusherChannel(`private-user-${currentUserId}`);
+
+    /* ─── Realtime: prepend incoming notifications ─── */
+    useEffect(() => {
+        if (!userChannel) return;
+
+        const onNewNotification = (n: Notif) => {
+            setNotifications((prev) => {
+                if (prev.some((x) => x.id === n.id)) return prev;
+                return [n, ...prev];
+            });
+        };
+
+        userChannel.bind("notification:new", onNewNotification);
+        return () => {
+            userChannel.unbind("notification:new", onNewNotification);
+        };
+    }, [userChannel]);
 
     const unreadCount = useMemo(
         () => notifications.filter((n) => !n.read).length,
@@ -237,8 +261,8 @@ export default function NotificationsClient({
                             key={t.key}
                             onClick={() => setTab(t.key as any)}
                             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors ${tab === t.key
-                                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm"
-                                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm"
+                                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                                 }`}
                         >
                             {t.label}
@@ -291,8 +315,8 @@ function NotificationRow({
     return (
         <div
             className={`group relative rounded-2xl border overflow-hidden transition-colors ${notif.read
-                    ? "bg-white border-gray-100 hover:border-gray-200"
-                    : "bg-indigo-50/70 border-indigo-100"
+                ? "bg-white border-gray-100 hover:border-gray-200"
+                : "bg-indigo-50/70 border-indigo-100"
                 }`}
         >
             {/* Unread left accent */}
@@ -371,7 +395,7 @@ function NotificationRow({
                     </Link>
                 </div>
 
-                {/* Actions — always visible on mobile, hover on desktop */}
+                {/* Actions */}
                 <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150">
                     {!notif.read && (
                         <button
@@ -469,6 +493,8 @@ function describe(n: Notif): string {
             return "mentioned you in a post";
         case "message":
             return "sent you a message";
+        case "call":
+            return "started a call with you";
         default:
             return "interacted with you";
     }
@@ -484,6 +510,8 @@ function linkFor(n: Notif): string {
             return `/profile/${n.actor.id}`;
         case "message":
             return "/messages";
+        case "call":
+            return "/messages";
         default:
             return "/dashboard";
     }
@@ -498,11 +526,7 @@ function typeIconFor(type: NotificationType): {
             return {
                 bg: "bg-gradient-to-br from-pink-500 to-rose-500",
                 icon: (
-                    <svg
-                        className="w-2.5 h-2.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                 ),
@@ -511,11 +535,7 @@ function typeIconFor(type: NotificationType): {
             return {
                 bg: "bg-gradient-to-br from-blue-500 to-indigo-500",
                 icon: (
-                    <svg
-                        className="w-2.5 h-2.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                 ),
@@ -524,11 +544,7 @@ function typeIconFor(type: NotificationType): {
             return {
                 bg: "bg-gradient-to-br from-green-500 to-emerald-500",
                 icon: (
-                    <svg
-                        className="w-2.5 h-2.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                 ),
@@ -537,11 +553,7 @@ function typeIconFor(type: NotificationType): {
             return {
                 bg: "bg-gradient-to-br from-orange-500 to-amber-500",
                 icon: (
-                    <svg
-                        className="w-2.5 h-2.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                     </svg>
                 ),
@@ -550,12 +562,17 @@ function typeIconFor(type: NotificationType): {
             return {
                 bg: "bg-gradient-to-br from-purple-500 to-fuchsia-500",
                 icon: (
-                    <svg
-                        className="w-2.5 h-2.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                ),
+            };
+        case "call":
+            return {
+                bg: "bg-gradient-to-br from-emerald-500 to-teal-500",
+                icon: (
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                 ),
             };
@@ -563,11 +580,7 @@ function typeIconFor(type: NotificationType): {
             return {
                 bg: "bg-gradient-to-br from-gray-500 to-slate-500",
                 icon: (
-                    <svg
-                        className="w-2.5 h-2.5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                    >
+                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 ),

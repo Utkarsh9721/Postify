@@ -5,6 +5,7 @@ import connectDB from "@/lib/mongo";
 import Chat from "@/models/Chat";
 import Message from "@/models/Message";
 import { getCurrentUser } from "@/lib/auth";
+import { pusherServer } from "@/lib/pusher";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,6 @@ export async function GET(
 
         const { id } = await params;
 
-        // Guard against malformed IDs — prevents a CastError 500
         if (!Types.ObjectId.isValid(id)) {
             return NextResponse.json(
                 { message: "Invalid chat id" },
@@ -40,7 +40,6 @@ export async function GET(
         const userObjectId = new Types.ObjectId(user._id);
         const chatObjectId = new Types.ObjectId(id);
 
-        // Single query: confirm chat exists AND user is a participant
         const chat = await Chat.findOne({
             _id: chatObjectId,
             participants: userObjectId,
@@ -49,15 +48,12 @@ export async function GET(
             .lean();
 
         if (!chat) {
-            // Can't tell if it doesn't exist or user isn't a member.
-            // Returning 404 for both avoids leaking whether a chat exists.
             return NextResponse.json(
                 { message: "Chat not found" },
                 { status: 404 }
             );
         }
 
-        // Fetch messages and mark-as-read in parallel
         const [messages] = await Promise.all([
             Message.find({ chat: chatObjectId })
                 .sort({ createdAt: 1 })
@@ -142,12 +138,12 @@ export async function POST(
         const userObjectId = new Types.ObjectId(user._id);
         const chatObjectId = new Types.ObjectId(id);
 
-        // Single query — same trick as GET
+        // Fetch the chat WITH participants so we can find the recipient
         const chat = await Chat.findOne({
             _id: chatObjectId,
             participants: userObjectId,
         })
-            .select("_id")
+            .select("_id participants")
             .lean();
 
         if (!chat) {
@@ -165,7 +161,7 @@ export async function POST(
             readBy: [userObjectId],
         });
 
-        // Bump the chat's updatedAt + lastMessage in one atomic write
+        // Bump the chat's updatedAt + lastMessage
         await Chat.updateOne(
             { _id: chatObjectId },
             {
@@ -176,10 +172,41 @@ export async function POST(
             }
         );
 
-        // Populate the sender for the response
+        // Populate the sender for both the response and the Pusher payload
         const populated: any = await Message.findById(message._id)
             .populate("sender", "name avatar")
             .lean();
+
+        // ─── Broadcast to the recipient via Pusher ───
+        try {
+            const recipientId = (chat.participants as any[])
+                .map((p) => p.toString())
+                .find((pid) => pid !== user._id);
+
+            if (recipientId) {
+                await pusherServer.trigger(
+                    `private-user-${recipientId}`,
+                    "message:new",
+                    {
+                        chatId: id,
+                        message: {
+                            id: populated._id.toString(),
+                            content: populated.content,
+                            createdAt: populated.createdAt,
+                            isMine: false,
+                            sender: {
+                                id: populated.sender?._id?.toString(),
+                                name: populated.sender?.name ?? "Unknown",
+                                avatar: populated.sender?.avatar ?? "",
+                            },
+                        },
+                    }
+                );
+            }
+        } catch (pusherErr) {
+            // Log but don't fail the request — the message is already saved
+            console.error("Pusher trigger failed:", pusherErr);
+        }
 
         return NextResponse.json(
             {

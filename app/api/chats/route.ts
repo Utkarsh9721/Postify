@@ -1,5 +1,6 @@
 // app/api/chats/route.ts
 import { NextResponse } from "next/server";
+import { pusherServer } from "@/lib/pusher";
 import { Types } from "mongoose";
 import connectDB from "@/lib/mongo";
 import Chat from "@/models/Chat";

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Person = {
     id: string;
@@ -24,6 +25,7 @@ export default function NewChatModal({
     onClose: () => void;
     onPick: (userId: string) => void;
 }) {
+    const router = useRouter();
     const [users, setUsers] = useState<Person[]>([]);
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("");
@@ -53,12 +55,10 @@ export default function NewChatModal({
         };
     }, [open]);
 
-    // Reset search when opening
     useEffect(() => {
         if (open) setQuery("");
     }, [open]);
 
-    // Close on Escape
     useEffect(() => {
         if (!open) return;
         const onKey = (e: KeyboardEvent) => {
@@ -84,6 +84,35 @@ export default function NewChatModal({
             return score(b) - score(a);
         });
     }, [users, query]);
+
+    /**
+     * Start an audio or video call with the given user.
+     * Notifies the recipient via Pusher BEFORE navigating so the ring
+     * modal actually appears on the other side.
+     */
+    async function startCall(userId: string, type: "audio" | "video") {
+        onClose();
+
+        try {
+            const res = await fetch("/api/calls/initiate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    recipientId: userId,
+                    callType: type,
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.error("Call initiate failed:", data.message);
+            }
+        } catch (err) {
+            console.error("Call initiate network error:", err);
+        }
+
+        router.push(`/call/${userId}?to=${userId}&type=${type}`);
+    }
 
     if (!open) return null;
 
@@ -179,9 +208,7 @@ export default function NewChatModal({
                     {loading ? (
                         <div className="p-10 flex flex-col items-center justify-center gap-3">
                             <div className="w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-500 animate-spin" />
-                            <p className="text-xs text-gray-400">
-                                Loading people...
-                            </p>
+                            <p className="text-xs text-gray-400">Loading people...</p>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="p-10 flex flex-col items-center justify-center text-center">
@@ -201,9 +228,7 @@ export default function NewChatModal({
                                 </svg>
                             </div>
                             <p className="text-sm font-semibold text-gray-700">
-                                {query
-                                    ? `No one matches "${query}"`
-                                    : "No users yet"}
+                                {query ? `No one matches "${query}"` : "No users yet"}
                             </p>
                             <p className="text-xs text-gray-400 mt-1">
                                 Try a different search term
@@ -212,79 +237,107 @@ export default function NewChatModal({
                     ) : (
                         <ul className="py-2">
                             {filtered.map((u) => {
-                                const initial = (
-                                    u.name?.[0] ?? "U"
-                                ).toUpperCase();
-                                const handle =
-                                    "@" +
-                                    (u.email?.split("@")[0] ?? "user");
+                                const initial = (u.name?.[0] ?? "U").toUpperCase();
+                                const handle = "@" + (u.email?.split("@")[0] ?? "user");
 
                                 return (
-                                    <li key={u.id} className="px-2">
-                                        <button
-                                            onClick={() => onPick(u.id)}
-                                            className="w-full flex items-center gap-3 px-2 py-2.5 rounded-2xl hover:bg-indigo-50 active:scale-[0.98] transition-colors text-left group"
-                                        >
-                                            {/* Avatar with gradient ring */}
-                                            <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 flex-shrink-0 shadow-sm">
-                                                <div className="w-full h-full rounded-full overflow-hidden bg-white">
-                                                    {u.avatar ? (
-                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                        <img
-                                                            src={u.avatar}
-                                                            alt={u.name}
-                                                            className="w-full h-full object-cover"
-                                                            loading="lazy"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
-                                                            <span className="text-sm font-bold text-white">
-                                                                {initial}
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                    <li
+                                        key={u.id}
+                                        className="px-2 group/row hover:bg-indigo-50/60 rounded-2xl transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {/* Main row — click to open chat */}
+                                            <button
+                                                onClick={() => onPick(u.id)}
+                                                className="flex-1 flex items-center gap-3 px-2 py-2.5 rounded-2xl active:scale-[0.98] transition-colors text-left group"
+                                            >
+                                                <div className="w-11 h-11 rounded-full p-[2px] bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 flex-shrink-0 shadow-sm">
+                                                    <div className="w-full h-full rounded-full overflow-hidden bg-white">
+                                                        {u.avatar ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img
+                                                                src={u.avatar}
+                                                                alt={u.name}
+                                                                className="w-full h-full object-cover"
+                                                                loading="lazy"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
+                                                                <span className="text-sm font-bold text-white">
+                                                                    {initial}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-700 transition-colors">
-                                                        {u.name}
-                                                    </p>
-                                                    {u.isFollowing &&
-                                                        u.followsMe && (
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-indigo-700 transition-colors">
+                                                            {u.name}
+                                                        </p>
+                                                        {u.isFollowing && u.followsMe && (
                                                             <span className="text-[9px] font-bold text-green-600 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-full flex-shrink-0">
                                                                 FRIENDS
                                                             </span>
                                                         )}
-                                                    {u.followsMe &&
-                                                        !u.isFollowing && (
+                                                        {u.followsMe && !u.isFollowing && (
                                                             <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full flex-shrink-0">
                                                                 FOLLOWS YOU
                                                             </span>
                                                         )}
+                                                    </div>
+                                                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                                                        {handle}
+                                                    </p>
                                                 </div>
-                                                <p className="text-xs text-gray-500 truncate mt-0.5">
-                                                    {handle}
-                                                </p>
-                                            </div>
+                                            </button>
 
-                                            {/* Chevron */}
-                                            <svg
-                                                className="w-5 h-5 text-gray-300 flex-shrink-0 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-transform"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={2}
-                                                    d="M9 5l7 7-7 7"
-                                                />
-                                            </svg>
-                                        </button>
+                                            {/* Action buttons — audio + video call */}
+                                            <div className="flex items-center gap-0.5 pr-2 flex-shrink-0">
+                                                <button
+                                                    onClick={() => startCall(u.id, "audio")}
+                                                    className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-indigo-600 hover:bg-indigo-100 active:scale-90 transition-all"
+                                                    aria-label={`Audio call ${u.name}`}
+                                                    title="Audio call"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                                        />
+                                                    </svg>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => startCall(u.id, "video")}
+                                                    className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-indigo-600 hover:bg-indigo-100 active:scale-90 transition-all"
+                                                    aria-label={`Video call ${u.name}`}
+                                                    title="Video call"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                                        />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </li>
                                 );
                             })}

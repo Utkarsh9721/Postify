@@ -4,5 +4,6 @@ import Post from "@/models/Post";
 import Chat from "@/models/Chat";
 import Message from "@/models/Message";
 import Notification from "@/models/Notification";
+import Call from "@/models/Call";
 
-export { User, Post, Chat, Message, Notification };
+export { User, Post, Chat, Message, Notification, Call };

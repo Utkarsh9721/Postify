@@ -103,6 +103,7 @@ export default async function NotificationsPage() {
     return (
         <NotificationsClient
             initialNotifications={JSON.parse(JSON.stringify(initialNotifications))}
+            currentUserId={userId}
         />
     );
 }

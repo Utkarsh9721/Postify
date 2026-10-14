@@ -2,132 +2,81 @@
 import { Types } from "mongoose";
 import User from "@/models/user";
 import Notification from "@/models/Notification";
+import { revalidateTag } from "next/cache";
+import { pusherServer } from "@/lib/pusher";
 
-/**
- * Returns the set of user IDs that `userId` is following.
- */
-export async function getFollowingIds(userId: string): Promise<Set<string>> {
-    const user = await User.findById(userId).select("following").lean();
-    return new Set(
-        (user?.following ?? []).map((id: any) => id.toString())
-    );
-}
-
-/**
- * Returns the set of user IDs that follow `userId`.
- */
-export async function getFollowerIds(userId: string): Promise<Set<string>> {
-    const user = await User.findById(userId).select("followers").lean();
-    return new Set(
-        (user?.followers ?? []).map((id: any) => id.toString())
-    );
-}
-
-/**
- * Follows `targetId` on behalf of `meId`.
- * - Uses $addToSet for idempotency (safe to call twice)
- * - Creates a "follow" notification
- * - Returns the new follower count of the target
- */
-export async function followUser(
-    meId: string,
-    targetId: string
-): Promise<{ following: true; followersCount: number }> {
-    if (meId === targetId) {
-        throw new Error("You cannot follow yourself");
-    }
-
+export async function toggleFollow(meId: string, targetId: string) {
     const meObjectId = new Types.ObjectId(meId);
     const targetObjectId = new Types.ObjectId(targetId);
 
-    // $addToSet prevents duplicates even if called concurrently
-    await Promise.all([
-        User.updateOne(
-            { _id: meId },
+    const target = await User.findById(targetObjectId);
+    if (!target) throw new Error("User not found");
+
+    if (meId === targetId) throw new Error("You cannot follow yourself");
+
+    const isFollowing = target.followers.some(
+        (uid: Types.ObjectId) => uid.toString() === meId
+    );
+
+    if (isFollowing) {
+        // Unfollow
+        target.followers = target.followers.filter(
+            (uid: Types.ObjectId) => uid.toString() !== meId
+        );
+        await User.updateOne(
+            { _id: meObjectId },
+            { $pull: { following: targetObjectId } }
+        );
+    } else {
+        // Follow
+        target.followers.push(meObjectId);
+        await User.updateOne(
+            { _id: meObjectId },
             { $addToSet: { following: targetObjectId } }
-        ),
-        User.updateOne(
-            { _id: targetId },
-            { $addToSet: { followers: meObjectId } }
-        ),
-    ]);
+        );
 
-    // Only notify if this is a fresh follow (dedupe recent notifications)
-    const existing = await Notification.findOne({
-        recipient: targetObjectId,
-        actor: meObjectId,
-        type: "follow",
-        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-    });
-
-    if (!existing) {
-        await Notification.create({
+        // Notify the target only on new follows (not unfollows)
+        const notification = await Notification.create({
             recipient: targetObjectId,
             actor: meObjectId,
             type: "follow",
         });
+
+        // ─── Tell the target via Pusher ───
+        try {
+            const actor = await User.findById(meObjectId)
+                .select("name email avatar")
+                .lean();
+
+            await pusherServer.trigger(
+                `private-user-${targetId}`,
+                "notification:new",
+                {
+                    id: notification._id.toString(),
+                    type: "follow",
+                    read: false,
+                    createdAt: notification.createdAt,
+                    actor: {
+                        id: meId,
+                        name: (actor as any)?.name ?? "Someone",
+                        email: (actor as any)?.email ?? "",
+                        avatar: (actor as any)?.avatar ?? "",
+                    },
+                    post: null,
+                }
+            );
+            console.log("✅ notification:new (follow) fired to", targetId);
+        } catch (pusherErr) {
+            console.error("❌ Pusher follow trigger failed:", pusherErr);
+        }
+
+        revalidateTag("notifications", "max");
     }
 
-    const target = await User.findById(targetId).select("followers").lean();
+    await target.save();
+
     return {
-        following: true,
-        followersCount: target?.followers?.length ?? 0,
+        following: !isFollowing,
+        followersCount: target.followers.length,
     };
-}
-
-/**
- * Unfollows `targetId` on behalf of `meId`.
- * Returns the new follower count of the target.
- */
-export async function unfollowUser(
-    meId: string,
-    targetId: string
-): Promise<{ following: false; followersCount: number }> {
-    const meObjectId = new Types.ObjectId(meId);
-    const targetObjectId = new Types.ObjectId(targetId);
-
-    await Promise.all([
-        User.updateOne(
-            { _id: meId },
-            { $pull: { following: targetObjectId } }
-        ),
-        User.updateOne(
-            { _id: targetId },
-            { $pull: { followers: meObjectId } }
-        ),
-    ]);
-
-    const target = await User.findById(targetId).select("followers").lean();
-    return {
-        following: false,
-        followersCount: target?.followers?.length ?? 0,
-    };
-}
-
-/**
- * Follows or unfollows based on current state.
- * Also removes stale "follow" notifications when unfollowing.
- */
-export async function toggleFollow(
-    meId: string,
-    targetId: string
-): Promise<{ following: boolean; followersCount: number }> {
-    if (meId === targetId) {
-        throw new Error("You cannot follow yourself");
-    }
-
-    const target = await User.findById(targetId).select("followers").lean();
-    if (!target) {
-        throw new Error("User not found");
-    }
-
-    const isFollowing = (target.followers ?? []).some(
-        (id: any) => id.toString() === meId
-    );
-
-    if (isFollowing) {
-        return unfollowUser(meId, targetId);
-    } else {
-        return followUser(meId, targetId);
-    }
 }
